@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumos Highlighter - Export Selection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #fdf0dd 0%, #ffdc7e 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+            color: white;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .content {
+            padding: 32px;
+        }
+
+        .section {
+            margin-bottom: 32px;
+        }
+
+        .section-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .time-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .time-option {
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s ease;
+            background: white;
+        }
+
+        .time-option:hover {
+            border-color: #2196f3;
+            background: #f3f7ff;
+        }
+
+        .time-option.selected {
+            border-color: #2196f3;
+            background: #2196f3;
+            color: white;
+        }
+
+        .custom-time {
+            display: none;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-top: 16px;
+        }
+
+        .custom-time.visible {
+            display: block;
+        }
+
+        .date-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .date-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .date-group label {
+            font-weight: 500;
+            color: #555;
+        }
+
+        .date-group input {
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .websites-section {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .website-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            transition: background 0.2s ease;
+        }
+
+        .website-item:hover {
+            background: #f5f5f5;
+        }
+
+        .website-checkbox {
+            margin-right: 12px;
+            transform: scale(1.2);
+        }
+
+        .website-info {
+            flex: 1;
+        }
+
+        .website-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .website-stats {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .preview-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 24px;
+        }
+
+        .preview-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 16px;
+            border-radius: 6px;
+            text-align: center;
+            border-left: 4px solid #2196f3;
+        }
+
+        .stat-number {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #2196f3;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .actions {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: #2196f3;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1976d2;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #666;
+        }
+
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .color-stats {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .color-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .time-options {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .date-inputs {
+                grid-template-columns: 1fr;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔆 Export All Sites Summary</h1>
+            <p>Customize your highlight export settings</p>
+        </div>
+
+        <div class="content">
+            <div class="loading" id="loading">
+                Loading your highlights...
+            </div>
+
+            <div id="selection-ui" style="display: none;">
+                <!-- Time Range Selection -->
+                <div class="section">
+                    <div class="section-title">
+                        ⏰ Time Range
+                    </div>
+                    <div class="time-options" id="timeOptions">
+                        <div class="time-option" data-period="1h">Past Hour</div>
+                        <div class="time-option" data-period="6h">Past 6 Hours</div>
+                        <div class="time-option" data-period="24h">Past 24 Hours</div>
+                        <div class="time-option" data-period="3d">Past 3 Days</div>
+                        <div class="time-option" data-period="1w">Past Week</div>
+                        <div class="time-option" data-period="1m">Past Month</div>
+                        <div class="time-option" data-period="custom">Custom Range</div>
+                    </div>
+
+                    <div class="custom-time" id="customTime">
+                        <div class="date-inputs">
+                            <div class="date-group">
+                                <label>From Date:</label>
+                                <input type="datetime-local" id="fromDate">
+                            </div>
+                            <div class="date-group">
+                                <label>To Date:</label>
+                                <input type="datetime-local" id="toDate">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Website Selection -->
+                <div class="section">
+                    <div class="section-title">
+                        🌐 Select Websites
+                    </div>
+                    <div class="websites-section" id="websitesList">
+                        <!-- Websites will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Preview -->
+                <div class="section">
+                    <div class="section-title">
+                        👁️ Preview
+                    </div>
+                    <div class="preview-section" id="previewSection">
+                        <!-- Preview will be generated here -->
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="actions">
+                    <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
+                    <button class="btn btn-primary" id="exportBtn">🖨️ Export PDF</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="export-selection.js"></script>
+</body>
+</html>

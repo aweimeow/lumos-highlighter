@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Lumos Highlighter</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="popup-container">
+        <div class="banner-container">
+            <img src="../assets/images/banner.png" alt="Lumos Highlighter" class="banner-image">
+        </div>
+        <div class="style-section">
+            <h2>Highlight Style Options</h2>
+            
+            <!-- Corner Style -->
+            <div class="style-group">
+                <label>Corner Style:</label>
+                <div class="button-row">
+                    <button type="button" class="style-btn corner-btn" data-style="corner-style" data-value="rectangular">
+                        <span class="sample-text rectangular">Rectangular</span>
+                    </button>
+                    <button type="button" class="style-btn corner-btn" data-style="corner-style" data-value="rounded">
+                        <span class="sample-text rounded">Rounded</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Background Style -->
+            <div class="style-group">
+                <label>Background Style:</label>
+                <div class="button-row">
+                    <button type="button" class="style-btn bg-btn" data-style="background-style" data-value="transparent">
+                        <span class="sample-text bg-transparent">Transparent Fill</span>
+                    </button>
+                    <button type="button" class="style-btn bg-btn" data-style="background-style" data-value="underline">
+                        <span class="sample-text bg-underline">Thick Underline</span>
+                    </button>
+                    <button type="button" class="style-btn bg-btn" data-style="background-style" data-value="crayon">
+                        <span class="sample-text bg-crayon">Crayon Fill</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Text Style -->
+            <div class="style-group">
+                <label>Text Style:</label>
+                <div class="button-row">
+                    <button type="button" class="style-btn text-btn" data-style="text-style" data-value="default">
+                        <span class="sample-text text-default">Default</span>
+                    </button>
+                    <button type="button" class="style-btn text-btn" data-style="text-style" data-value="bold">
+                        <span class="sample-text text-bold">Bold</span>
+                    </button>
+                    <button type="button" class="style-btn text-btn" data-style="text-style" data-value="shadow">
+                        <span class="sample-text text-shadow">Shadow</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Preview -->
+            <div class="style-preview">
+                <label>Preview:</label>
+                <div class="preview-container">
+                    <span id="preview-text" class="preview-highlight">This is a preview of your highlight style</span>
+                </div>
+            </div>
+            
+            <!-- Save Button -->
+            <button id="save-styles" class="save-button">Save Style Settings</button>
+            
+            <!-- Buy me a coffee button -->
+            <a href="https://coff.ee/weiyudev" target="_blank" class="coffee-button">
+                <span class="coffee-icon">☕</span>
+                <span class="coffee-text">Buy me a coffee</span>
+            </a>
+        </div>
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>

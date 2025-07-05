@@ -1,0 +1,405 @@
+/* Content script styles for Lumos Highlighter */
+
+/* Highlight colors */
+.lumos-highlight {
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+    padding: 2px 4px;
+    border-radius: 2px;
+}
+
+.lumos-highlight:hover {
+    opacity: 0.8;
+}
+
+/* Corner styles */
+.lumos-highlight.corner-rounded {
+    border-radius: 8px;
+}
+
+/* Background styles */
+.lumos-highlight.bg-underline {
+    background-color: transparent !important;
+    border-bottom: 3px solid currentColor;
+    padding-bottom: 1px;
+}
+
+.lumos-highlight.bg-crayon {
+    background-image: 
+        /* Layer 1: Main diagonal strokes */
+        repeating-linear-gradient(
+            135deg,
+            transparent 0px,
+            transparent 1px,
+            currentColor 1px,
+            currentColor 3px,
+            transparent 3px,
+            transparent 6px,
+            currentColor 6px,
+            currentColor 8px,
+            transparent 8px,
+            transparent 12px
+        ),
+        /* Layer 2: Secondary strokes */
+        repeating-linear-gradient(
+            140deg,
+            transparent 0px,
+            transparent 2px,
+            currentColor 2px,
+            currentColor 4px,
+            transparent 4px,
+            transparent 8px,
+            currentColor 8px,
+            currentColor 10px,
+            transparent 10px,
+            transparent 15px
+        ),
+        /* Layer 3: Texture overlay */
+        repeating-linear-gradient(
+            130deg,
+            transparent 0px,
+            transparent 3px,
+            currentColor 3px,
+            currentColor 5px,
+            transparent 5px,
+            transparent 10px,
+            currentColor 10px,
+            currentColor 12px,
+            transparent 12px,
+            transparent 18px
+        ),
+        /* Layer 4: Fine details */
+        repeating-linear-gradient(
+            138deg,
+            transparent 0px,
+            transparent 1px,
+            currentColor 1px,
+            currentColor 2px,
+            transparent 2px,
+            transparent 5px
+        );
+    background-size: 8px 8px, 12px 12px, 15px 15px, 6px 6px;
+    background-position: 0 0, 3px 3px, 6px 6px, 1px 1px;
+}
+
+/* Text styles */
+.lumos-highlight.text-bold {
+    font-weight: bold;
+}
+
+.lumos-highlight.text-shadow {
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Color-specific underline styles */
+.lumos-highlight-red.bg-underline {
+    border-bottom-color: #ff6363;
+}
+
+.lumos-highlight-orange.bg-underline {
+    border-bottom-color: #ffa500;
+}
+
+.lumos-highlight-yellow.bg-underline {
+    border-bottom-color: #ffeb3b;
+}
+
+.lumos-highlight-green.bg-underline {
+    border-bottom-color: #4caf50;
+}
+
+.lumos-highlight-blue.bg-underline {
+    border-bottom-color: #2196f3;
+}
+
+/* Color-specific crayon styles */
+.lumos-highlight-red.bg-crayon {
+    background-image: 
+        repeating-linear-gradient(
+            135deg,
+            transparent 0px, transparent 1px,
+            rgba(255, 99, 99, 0.4) 1px, rgba(255, 99, 99, 0.4) 3px,
+            transparent 3px, transparent 6px,
+            rgba(255, 99, 99, 0.3) 6px, rgba(255, 99, 99, 0.3) 8px,
+            transparent 8px, transparent 12px
+        ),
+        repeating-linear-gradient(
+            140deg,
+            transparent 0px, transparent 2px,
+            rgba(255, 99, 99, 0.35) 2px, rgba(255, 99, 99, 0.35) 4px,
+            transparent 4px, transparent 8px,
+            rgba(255, 99, 99, 0.25) 8px, rgba(255, 99, 99, 0.25) 10px,
+            transparent 10px, transparent 15px
+        ),
+        repeating-linear-gradient(
+            130deg,
+            transparent 0px, transparent 3px,
+            rgba(255, 99, 99, 0.3) 3px, rgba(255, 99, 99, 0.3) 5px,
+            transparent 5px, transparent 10px,
+            rgba(255, 99, 99, 0.2) 10px, rgba(255, 99, 99, 0.2) 12px,
+            transparent 12px, transparent 18px
+        ),
+        repeating-linear-gradient(
+            138deg,
+            transparent 0px, transparent 1px,
+            rgba(255, 99, 99, 0.25) 1px, rgba(255, 99, 99, 0.25) 2px,
+            transparent 2px, transparent 5px
+        );
+}
+
+.lumos-highlight-orange.bg-crayon {
+    background-image: 
+        repeating-linear-gradient(
+            135deg,
+            transparent 0px, transparent 1px,
+            rgba(255, 165, 0, 0.4) 1px, rgba(255, 165, 0, 0.4) 3px,
+            transparent 3px, transparent 6px,
+            rgba(255, 165, 0, 0.3) 6px, rgba(255, 165, 0, 0.3) 8px,
+            transparent 8px, transparent 12px
+        ),
+        repeating-linear-gradient(
+            140deg,
+            transparent 0px, transparent 2px,
+            rgba(255, 165, 0, 0.35) 2px, rgba(255, 165, 0, 0.35) 4px,
+            transparent 4px, transparent 8px,
+            rgba(255, 165, 0, 0.25) 8px, rgba(255, 165, 0, 0.25) 10px,
+            transparent 10px, transparent 15px
+        ),
+        repeating-linear-gradient(
+            130deg,
+            transparent 0px, transparent 3px,
+            rgba(255, 165, 0, 0.3) 3px, rgba(255, 165, 0, 0.3) 5px,
+            transparent 5px, transparent 10px,
+            rgba(255, 165, 0, 0.2) 10px, rgba(255, 165, 0, 0.2) 12px,
+            transparent 12px, transparent 18px
+        ),
+        repeating-linear-gradient(
+            138deg,
+            transparent 0px, transparent 1px,
+            rgba(255, 165, 0, 0.25) 1px, rgba(255, 165, 0, 0.25) 2px,
+            transparent 2px, transparent 5px
+        );
+}
+
+.lumos-highlight-yellow.bg-crayon {
+    background-image: 
+        repeating-linear-gradient(
+            135deg,
+            transparent 0px, transparent 1px,
+            rgba(255, 235, 59, 0.4) 1px, rgba(255, 235, 59, 0.4) 3px,
+            transparent 3px, transparent 6px,
+            rgba(255, 235, 59, 0.3) 6px, rgba(255, 235, 59, 0.3) 8px,
+            transparent 8px, transparent 12px
+        ),
+        repeating-linear-gradient(
+            140deg,
+            transparent 0px, transparent 2px,
+            rgba(255, 235, 59, 0.35) 2px, rgba(255, 235, 59, 0.35) 4px,
+            transparent 4px, transparent 8px,
+            rgba(255, 235, 59, 0.25) 8px, rgba(255, 235, 59, 0.25) 10px,
+            transparent 10px, transparent 15px
+        ),
+        repeating-linear-gradient(
+            130deg,
+            transparent 0px, transparent 3px,
+            rgba(255, 235, 59, 0.3) 3px, rgba(255, 235, 59, 0.3) 5px,
+            transparent 5px, transparent 10px,
+            rgba(255, 235, 59, 0.2) 10px, rgba(255, 235, 59, 0.2) 12px,
+            transparent 12px, transparent 18px
+        ),
+        repeating-linear-gradient(
+            138deg,
+            transparent 0px, transparent 1px,
+            rgba(255, 235, 59, 0.25) 1px, rgba(255, 235, 59, 0.25) 2px,
+            transparent 2px, transparent 5px
+        );
+}
+
+.lumos-highlight-green.bg-crayon {
+    background-image: 
+        repeating-linear-gradient(
+            135deg,
+            transparent 0px, transparent 1px,
+            rgba(76, 175, 80, 0.4) 1px, rgba(76, 175, 80, 0.4) 3px,
+            transparent 3px, transparent 6px,
+            rgba(76, 175, 80, 0.3) 6px, rgba(76, 175, 80, 0.3) 8px,
+            transparent 8px, transparent 12px
+        ),
+        repeating-linear-gradient(
+            140deg,
+            transparent 0px, transparent 2px,
+            rgba(76, 175, 80, 0.35) 2px, rgba(76, 175, 80, 0.35) 4px,
+            transparent 4px, transparent 8px,
+            rgba(76, 175, 80, 0.25) 8px, rgba(76, 175, 80, 0.25) 10px,
+            transparent 10px, transparent 15px
+        ),
+        repeating-linear-gradient(
+            130deg,
+            transparent 0px, transparent 3px,
+            rgba(76, 175, 80, 0.3) 3px, rgba(76, 175, 80, 0.3) 5px,
+            transparent 5px, transparent 10px,
+            rgba(76, 175, 80, 0.2) 10px, rgba(76, 175, 80, 0.2) 12px,
+            transparent 12px, transparent 18px
+        ),
+        repeating-linear-gradient(
+            138deg,
+            transparent 0px, transparent 1px,
+            rgba(76, 175, 80, 0.25) 1px, rgba(76, 175, 80, 0.25) 2px,
+            transparent 2px, transparent 5px
+        );
+}
+
+.lumos-highlight-blue.bg-crayon {
+    background-image: 
+        repeating-linear-gradient(
+            135deg,
+            transparent 0px, transparent 1px,
+            rgba(33, 150, 243, 0.4) 1px, rgba(33, 150, 243, 0.4) 3px,
+            transparent 3px, transparent 6px,
+            rgba(33, 150, 243, 0.3) 6px, rgba(33, 150, 243, 0.3) 8px,
+            transparent 8px, transparent 12px
+        ),
+        repeating-linear-gradient(
+            140deg,
+            transparent 0px, transparent 2px,
+            rgba(33, 150, 243, 0.35) 2px, rgba(33, 150, 243, 0.35) 4px,
+            transparent 4px, transparent 8px,
+            rgba(33, 150, 243, 0.25) 8px, rgba(33, 150, 243, 0.25) 10px,
+            transparent 10px, transparent 15px
+        ),
+        repeating-linear-gradient(
+            130deg,
+            transparent 0px, transparent 3px,
+            rgba(33, 150, 243, 0.3) 3px, rgba(33, 150, 243, 0.3) 5px,
+            transparent 5px, transparent 10px,
+            rgba(33, 150, 243, 0.2) 10px, rgba(33, 150, 243, 0.2) 12px,
+            transparent 12px, transparent 18px
+        ),
+        repeating-linear-gradient(
+            138deg,
+            transparent 0px, transparent 1px,
+            rgba(33, 150, 243, 0.25) 1px, rgba(33, 150, 243, 0.25) 2px,
+            transparent 2px, transparent 5px
+        );
+}
+
+.lumos-highlight-red {
+    background-color: rgba(255, 99, 99, 0.4);
+}
+
+.lumos-highlight-orange {
+    background-color: rgba(255, 165, 0, 0.4);
+}
+
+.lumos-highlight-yellow {
+    background-color: rgba(255, 235, 59, 0.4);
+}
+
+.lumos-highlight-green {
+    background-color: rgba(76, 175, 80, 0.4);
+}
+
+.lumos-highlight-blue {
+    background-color: rgba(33, 150, 243, 0.4);
+}
+
+/* Highlight toolbar styles */
+.lumos-highlight-toolbar {
+    position: absolute;
+    z-index: 10000;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    padding: 8px;
+    display: none;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.lumos-toolbar-colors {
+    display: flex;
+    gap: 4px;
+}
+
+.lumos-color-btn {
+    width: 28px;
+    height: 28px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: none;
+    padding: 0;
+}
+
+.lumos-color-btn:hover {
+    border-color: #999;
+    transform: scale(1.1);
+}
+
+.lumos-color-btn[data-color="red"] {
+    background-color: #ff6363;
+}
+
+.lumos-color-btn[data-color="orange"] {
+    background-color: #ffa500;
+}
+
+.lumos-color-btn[data-color="yellow"] {
+    background-color: #ffeb3b;
+}
+
+.lumos-color-btn[data-color="green"] {
+    background-color: #4caf50;
+}
+
+.lumos-color-btn[data-color="blue"] {
+    background-color: #2196f3;
+}
+
+.lumos-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.lumos-color-options {
+    display: flex;
+    gap: 4px;
+}
+
+.lumos-separator {
+    color: #ccc;
+    font-size: 16px;
+    font-weight: 300;
+    user-select: none;
+    margin: 0 4px;
+}
+
+.lumos-remove-btn {
+    height: 28px;
+    padding: 0 12px;
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.lumos-remove-btn:hover {
+    background-color: #d32f2f;
+}
+
+/* Prevent toolbar from interfering with page selection */
+.lumos-highlight-toolbar * {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}

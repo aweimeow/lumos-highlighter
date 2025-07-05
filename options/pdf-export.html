@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumos Highlighter - PDF Export</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 20px;
+        }
+        
+        .banner-logo {
+            max-height: 60px;
+            margin-bottom: 10px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .header h1 {
+            color: #2196f3;
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .export-info {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        
+        .website-section {
+            margin-bottom: 40px;
+            page-break-inside: avoid;
+        }
+        
+        .website-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .website-title {
+            font-size: 1.5em;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+            color: #2c3e50;
+        }
+        
+        .website-url {
+            color: #6c757d;
+            font-size: 0.9em;
+            word-break: break-all;
+            font-family: monospace;
+            background: rgba(255,255,255,0.7);
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        
+        .highlight {
+            margin-bottom: 25px;
+            padding: 15px;
+            border-left: 4px solid;
+            background: rgba(255, 255, 255, 0.8);
+            page-break-inside: avoid;
+        }
+        
+        .highlight-red {
+            border-left-color: #f44336;
+            background: rgba(255, 99, 99, 0.1);
+        }
+        
+        .highlight-orange {
+            border-left-color: #ff9800;
+            background: rgba(255, 165, 0, 0.1);
+        }
+        
+        .highlight-yellow {
+            border-left-color: #ffeb3b;
+            background: rgba(255, 235, 59, 0.1);
+        }
+        
+        .highlight-green {
+            border-left-color: #4caf50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+        
+        .highlight-blue {
+            border-left-color: #2196f3;
+            background: rgba(33, 150, 243, 0.1);
+        }
+        
+        .highlight-text {
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            padding: 8px 12px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        
+        .highlight-text.red {
+            background-color: rgba(255, 99, 99, 0.4);
+        }
+        
+        .highlight-text.orange {
+            background-color: rgba(255, 165, 0, 0.4);
+        }
+        
+        .highlight-text.yellow {
+            background-color: rgba(255, 235, 59, 0.4);
+        }
+        
+        .highlight-text.green {
+            background-color: rgba(76, 175, 80, 0.4);
+        }
+        
+        .highlight-text.blue {
+            background-color: rgba(33, 150, 243, 0.4);
+        }
+        
+        /* Style variations for PDF export */
+        .highlight-text.corner-rounded {
+            border-radius: 8px;
+        }
+        
+        .highlight-text.bg-underline {
+            background-color: transparent !important;
+            border-bottom: 3px solid currentColor;
+            padding-bottom: 1px;
+        }
+        
+        .highlight-text.bg-crayon {
+            background-image: 
+                repeating-linear-gradient(
+                    135deg,
+                    transparent 0px, transparent 1px,
+                    currentColor 1px, currentColor 3px,
+                    transparent 3px, transparent 6px,
+                    currentColor 6px, currentColor 8px,
+                    transparent 8px, transparent 12px
+                ),
+                repeating-linear-gradient(
+                    140deg,
+                    transparent 0px, transparent 2px,
+                    currentColor 2px, currentColor 4px,
+                    transparent 4px, transparent 8px,
+                    currentColor 8px, currentColor 10px,
+                    transparent 10px, transparent 15px
+                ),
+                repeating-linear-gradient(
+                    130deg,
+                    transparent 0px, transparent 3px,
+                    currentColor 3px, currentColor 5px,
+                    transparent 5px, transparent 10px,
+                    currentColor 10px, currentColor 12px,
+                    transparent 12px, transparent 18px
+                ),
+                repeating-linear-gradient(
+                    138deg,
+                    transparent 0px, transparent 1px,
+                    currentColor 1px, currentColor 2px,
+                    transparent 2px, transparent 5px
+                );
+            background-size: 8px 8px, 12px 12px, 15px 15px, 6px 6px;
+            background-position: 0 0, 3px 3px, 6px 6px, 1px 1px;
+        }
+        
+        .highlight-text.text-bold {
+            font-weight: bold;
+        }
+        
+        .highlight-text.text-shadow {
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Color-specific underline styles for PDF */
+        .highlight-text.red.bg-underline {
+            border-bottom-color: #ff6363;
+        }
+        
+        .highlight-text.orange.bg-underline {
+            border-bottom-color: #ffa500;
+        }
+        
+        .highlight-text.yellow.bg-underline {
+            border-bottom-color: #ffeb3b;
+        }
+        
+        .highlight-text.green.bg-underline {
+            border-bottom-color: #4caf50;
+        }
+        
+        .highlight-text.blue.bg-underline {
+            border-bottom-color: #2196f3;
+        }
+        
+        /* Color-specific crayon styles for PDF */
+        /* Color-specific crayon patterns for PDF export */
+        .highlight-text.red.bg-crayon {
+            background-image: 
+                repeating-linear-gradient(
+                    135deg,
+                    transparent 0px, transparent 1px,
+                    rgba(255, 99, 99, 0.4) 1px, rgba(255, 99, 99, 0.4) 3px,
+                    transparent 3px, transparent 6px,
+                    rgba(255, 99, 99, 0.3) 6px, rgba(255, 99, 99, 0.3) 8px,
+                    transparent 8px, transparent 12px
+                ),
+                repeating-linear-gradient(
+                    140deg,
+                    transparent 0px, transparent 2px,
+                    rgba(255, 99, 99, 0.35) 2px, rgba(255, 99, 99, 0.35) 4px,
+                    transparent 4px, transparent 8px,
+                    rgba(255, 99, 99, 0.25) 8px, rgba(255, 99, 99, 0.25) 10px,
+                    transparent 10px, transparent 15px
+                ),
+                repeating-linear-gradient(
+                    130deg,
+                    transparent 0px, transparent 3px,
+                    rgba(255, 99, 99, 0.3) 3px, rgba(255, 99, 99, 0.3) 5px,
+                    transparent 5px, transparent 10px,
+                    rgba(255, 99, 99, 0.2) 10px, rgba(255, 99, 99, 0.2) 12px,
+                    transparent 12px, transparent 18px
+                ),
+                repeating-linear-gradient(
+                    138deg,
+                    transparent 0px, transparent 1px,
+                    rgba(255, 99, 99, 0.25) 1px, rgba(255, 99, 99, 0.25) 2px,
+                    transparent 2px, transparent 5px
+                );
+        }
+        
+        .highlight-text.orange.bg-crayon {
+            background-image: 
+                repeating-linear-gradient(
+                    135deg,
+                    transparent 0px, transparent 1px,
+                    rgba(255, 165, 0, 0.4) 1px, rgba(255, 165, 0, 0.4) 3px,
+                    transparent 3px, transparent 6px,
+                    rgba(255, 165, 0, 0.3) 6px, rgba(255, 165, 0, 0.3) 8px,
+                    transparent 8px, transparent 12px
+                ),
+                repeating-linear-gradient(
+                    140deg,
+                    transparent 0px, transparent 2px,
+                    rgba(255, 165, 0, 0.35) 2px, rgba(255, 165, 0, 0.35) 4px,
+                    transparent 4px, transparent 8px,
+                    rgba(255, 165, 0, 0.25) 8px, rgba(255, 165, 0, 0.25) 10px,
+                    transparent 10px, transparent 15px
+                ),
+                repeating-linear-gradient(
+                    130deg,
+                    transparent 0px, transparent 3px,
+                    rgba(255, 165, 0, 0.3) 3px, rgba(255, 165, 0, 0.3) 5px,
+                    transparent 5px, transparent 10px,
+                    rgba(255, 165, 0, 0.2) 10px, rgba(255, 165, 0, 0.2) 12px,
+                    transparent 12px, transparent 18px
+                ),
+                repeating-linear-gradient(
+                    138deg,
+                    transparent 0px, transparent 1px,
+                    rgba(255, 165, 0, 0.25) 1px, rgba(255, 165, 0, 0.25) 2px,
+                    transparent 2px, transparent 5px
+                );
+        }
+        
+        .highlight-text.yellow.bg-crayon {
+            background-image: 
+                repeating-linear-gradient(
+                    135deg,
+                    transparent 0px, transparent 1px,
+                    rgba(255, 235, 59, 0.4) 1px, rgba(255, 235, 59, 0.4) 3px,
+                    transparent 3px, transparent 6px,
+                    rgba(255, 235, 59, 0.3) 6px, rgba(255, 235, 59, 0.3) 8px,
+                    transparent 8px, transparent 12px
+                ),
+                repeating-linear-gradient(
+                    140deg,
+                    transparent 0px, transparent 2px,
+                    rgba(255, 235, 59, 0.35) 2px, rgba(255, 235, 59, 0.35) 4px,
+                    transparent 4px, transparent 8px,
+                    rgba(255, 235, 59, 0.25) 8px, rgba(255, 235, 59, 0.25) 10px,
+                    transparent 10px, transparent 15px
+                ),
+                repeating-linear-gradient(
+                    130deg,
+                    transparent 0px, transparent 3px,
+                    rgba(255, 235, 59, 0.3) 3px, rgba(255, 235, 59, 0.3) 5px,
+                    transparent 5px, transparent 10px,
+                    rgba(255, 235, 59, 0.2) 10px, rgba(255, 235, 59, 0.2) 12px,
+                    transparent 12px, transparent 18px
+                ),
+                repeating-linear-gradient(
+                    138deg,
+                    transparent 0px, transparent 1px,
+                    rgba(255, 235, 59, 0.25) 1px, rgba(255, 235, 59, 0.25) 2px,
+                    transparent 2px, transparent 5px
+                );
+        }
+        
+        .highlight-text.green.bg-crayon {
+            background-image: 
+                repeating-linear-gradient(
+                    135deg,
+                    transparent 0px, transparent 1px,
+                    rgba(76, 175, 80, 0.4) 1px, rgba(76, 175, 80, 0.4) 3px,
+                    transparent 3px, transparent 6px,
+                    rgba(76, 175, 80, 0.3) 6px, rgba(76, 175, 80, 0.3) 8px,
+                    transparent 8px, transparent 12px
+                ),
+                repeating-linear-gradient(
+                    140deg,
+                    transparent 0px, transparent 2px,
+                    rgba(76, 175, 80, 0.35) 2px, rgba(76, 175, 80, 0.35) 4px,
+                    transparent 4px, transparent 8px,
+                    rgba(76, 175, 80, 0.25) 8px, rgba(76, 175, 80, 0.25) 10px,
+                    transparent 10px, transparent 15px
+                ),
+                repeating-linear-gradient(
+                    130deg,
+                    transparent 0px, transparent 3px,
+                    rgba(76, 175, 80, 0.3) 3px, rgba(76, 175, 80, 0.3) 5px,
+                    transparent 5px, transparent 10px,
+                    rgba(76, 175, 80, 0.2) 10px, rgba(76, 175, 80, 0.2) 12px,
+                    transparent 12px, transparent 18px
+                ),
+                repeating-linear-gradient(
+                    138deg,
+                    transparent 0px, transparent 1px,
+                    rgba(76, 175, 80, 0.25) 1px, rgba(76, 175, 80, 0.25) 2px,
+                    transparent 2px, transparent 5px
+                );
+        }
+        
+        .highlight-text.blue.bg-crayon {
+            background-image: 
+                repeating-linear-gradient(
+                    135deg,
+                    transparent 0px, transparent 1px,
+                    rgba(33, 150, 243, 0.4) 1px, rgba(33, 150, 243, 0.4) 3px,
+                    transparent 3px, transparent 6px,
+                    rgba(33, 150, 243, 0.3) 6px, rgba(33, 150, 243, 0.3) 8px,
+                    transparent 8px, transparent 12px
+                ),
+                repeating-linear-gradient(
+                    140deg,
+                    transparent 0px, transparent 2px,
+                    rgba(33, 150, 243, 0.35) 2px, rgba(33, 150, 243, 0.35) 4px,
+                    transparent 4px, transparent 8px,
+                    rgba(33, 150, 243, 0.25) 8px, rgba(33, 150, 243, 0.25) 10px,
+                    transparent 10px, transparent 15px
+                ),
+                repeating-linear-gradient(
+                    130deg,
+                    transparent 0px, transparent 3px,
+                    rgba(33, 150, 243, 0.3) 3px, rgba(33, 150, 243, 0.3) 5px,
+                    transparent 5px, transparent 10px,
+                    rgba(33, 150, 243, 0.2) 10px, rgba(33, 150, 243, 0.2) 12px,
+                    transparent 12px, transparent 18px
+                ),
+                repeating-linear-gradient(
+                    138deg,
+                    transparent 0px, transparent 1px,
+                    rgba(33, 150, 243, 0.25) 1px, rgba(33, 150, 243, 0.25) 2px,
+                    transparent 2px, transparent 5px
+                );
+        }
+        
+        .highlight-context {
+            font-size: 0.95em;
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+        
+        .context-before {
+            opacity: 0.7;
+        }
+        
+        .context-after {
+            opacity: 0.7;
+        }
+        
+        .context-highlighted {
+            font-weight: bold;
+            padding: 2px 4px;
+            border-radius: 3px;
+            margin: 0 2px;
+        }
+        
+        .context-highlighted.red {
+            background-color: rgba(255, 99, 99, 0.4);
+        }
+        
+        .context-highlighted.orange {
+            background-color: rgba(255, 165, 0, 0.4);
+        }
+        
+        .context-highlighted.yellow {
+            background-color: rgba(255, 235, 59, 0.4);
+        }
+        
+        .context-highlighted.green {
+            background-color: rgba(76, 175, 80, 0.4);
+        }
+        
+        .context-highlighted.blue {
+            background-color: rgba(33, 150, 243, 0.4);
+        }
+        
+        .highlight-meta {
+            margin-top: 10px;
+            font-size: 0.8em;
+            color: #888;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.2em;
+            color: #666;
+        }
+        
+        .print-btn-fixed {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 16px 32px;
+            background: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            box-shadow: 0 8px 24px rgba(33, 150, 243, 0.4);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            backdrop-filter: blur(10px);
+            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+        }
+        
+        .print-btn-fixed:hover {
+            background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+            transform: translate(-50%, -50%) translateY(-3px);
+            box-shadow: 0 12px 32px rgba(33, 150, 243, 0.5);
+        }
+        
+        .print-btn-fixed:active {
+            transform: translate(-50%, -50%) translateY(-1px);
+            box-shadow: 0 4px 16px rgba(33, 150, 243, 0.4);
+        }
+        
+        @media print {
+            .print-btn-fixed {
+                display: none !important;
+            }
+            
+            body {
+                margin: 0;
+                padding: 15px;
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            
+            * {
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            
+            .website-section {
+                page-break-after: auto;
+            }
+            
+            .highlight {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading">
+        Generating PDF export...
+    </div>
+    
+    <script src="pdf-export.js"></script>
+</body>
+</html>
