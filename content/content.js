@@ -25,6 +25,55 @@ function init() {
     
     // Load and restore highlights for this page
     restoreHighlights();
+    
+    // Set up SPA navigation detection
+    setupSPANavigationDetection();
+}
+
+// Detect SPA navigation and re-restore highlights
+function setupSPANavigationDetection() {
+    let currentURL = window.location.href;
+    
+    // Listen for URL changes (SPA navigation)
+    const checkURLChange = () => {
+        if (window.location.href !== currentURL) {
+            console.log('SPA navigation detected:', currentURL, '->', window.location.href);
+            currentURL = window.location.href;
+            
+            // Clear existing highlights and restore for new page
+            setTimeout(() => {
+                restoreHighlights();
+            }, 1000);
+        }
+    };
+    
+    // Use multiple detection methods for SPA navigation
+    
+    // Method 1: History API events
+    const originalPushState = history.pushState;
+    const originalReplaceState = history.replaceState;
+    
+    history.pushState = function(...args) {
+        originalPushState.apply(history, args);
+        setTimeout(checkURLChange, 100);
+    };
+    
+    history.replaceState = function(...args) {
+        originalReplaceState.apply(history, args);
+        setTimeout(checkURLChange, 100);
+    };
+    
+    window.addEventListener('popstate', () => {
+        setTimeout(checkURLChange, 100);
+    });
+    
+    // Method 2: Periodic URL checking (fallback)
+    setInterval(checkURLChange, 2000);
+    
+    // Method 3: Hash change detection
+    window.addEventListener('hashchange', () => {
+        setTimeout(checkURLChange, 100);
+    });
 }
 
 // Handle text selection
@@ -610,12 +659,36 @@ function getBackupContext(direction, range) {
     return '';
 }
 
-// Get position data for highlight
+// Get position data for highlight (enhanced for dynamic content)
 function getPositionData(range) {
+    const startContainer = range.startContainer;
+    const endContainer = range.endContainer;
+    
     return {
+        // Traditional offset-based positioning
         startOffset: range.startOffset,
         endOffset: range.endOffset,
-        xpath: getXPath(range.commonAncestorContainer)
+        
+        // XPath-based positioning (more robust for dynamic content)
+        startXPath: getXPath(startContainer),
+        endXPath: getXPath(endContainer),
+        
+        // CSS selector-based positioning (fallback)
+        startSelector: getCSSSelector(startContainer.nodeType === Node.TEXT_NODE ? startContainer.parentElement : startContainer),
+        endSelector: getCSSSelector(endContainer.nodeType === Node.TEXT_NODE ? endContainer.parentElement : endContainer),
+        
+        // Text-based positioning (for verification)
+        startTextIndex: getTextIndex(startContainer, range.startOffset),
+        endTextIndex: getTextIndex(endContainer, range.endOffset),
+        
+        // DOM structure fingerprint
+        domFingerprint: createDOMFingerprint(range.commonAncestorContainer),
+        
+        // Additional context for verification
+        surroundingText: {
+            before: range.startContainer.textContent?.substring(Math.max(0, range.startOffset - 50), range.startOffset) || '',
+            after: range.endContainer.textContent?.substring(range.endOffset, range.endOffset + 50) || ''
+        }
     };
 }
 
@@ -649,6 +722,88 @@ function getXPath(element) {
     }
     
     return parts.length ? '/' + parts.join('/') : '';
+}
+
+// Generate CSS selector for element
+function getCSSSelector(element) {
+    if (!element || element.nodeType !== Node.ELEMENT_NODE) {
+        return '';
+    }
+    
+    // Use ID if available
+    if (element.id) {
+        return `#${element.id}`;
+    }
+    
+    // Build selector path
+    const path = [];
+    let current = element;
+    
+    while (current && current.nodeType === Node.ELEMENT_NODE && current !== document.body) {
+        let selector = current.tagName.toLowerCase();
+        
+        // Add class if available
+        if (current.className && typeof current.className === 'string') {
+            const classes = current.className.split(/\s+/).filter(c => c && !c.startsWith('lumos-'));
+            if (classes.length > 0) {
+                selector += '.' + classes.slice(0, 2).join('.');
+            }
+        }
+        
+        // Add nth-child if needed for uniqueness
+        if (current.parentElement) {
+            const siblings = Array.from(current.parentElement.children).filter(el => el.tagName === current.tagName);
+            if (siblings.length > 1) {
+                const index = siblings.indexOf(current) + 1;
+                selector += `:nth-child(${index})`;
+            }
+        }
+        
+        path.unshift(selector);
+        current = current.parentElement;
+    }
+    
+    return path.join(' > ');
+}
+
+// Get text index within a larger context
+function getTextIndex(container, offset) {
+    if (container.nodeType === Node.TEXT_NODE) {
+        // Find the text node's position within its parent's text content
+        let textIndex = 0;
+        let currentNode = container.parentNode.firstChild;
+        
+        while (currentNode && currentNode !== container) {
+            if (currentNode.nodeType === Node.TEXT_NODE) {
+                textIndex += currentNode.textContent.length;
+            }
+            currentNode = currentNode.nextSibling;
+        }
+        
+        return textIndex + offset;
+    }
+    
+    return offset;
+}
+
+// Create DOM structure fingerprint
+function createDOMFingerprint(element) {
+    if (!element) return '';
+    
+    const fingerprint = [];
+    let current = element;
+    
+    // Go up the DOM tree to create a structural fingerprint
+    for (let i = 0; i < 5 && current && current !== document.body; i++) {
+        const tagName = current.tagName ? current.tagName.toLowerCase() : 'text';
+        const className = current.className && typeof current.className === 'string' ? 
+            current.className.split(/\s+/).filter(c => c && !c.startsWith('lumos-')).slice(0, 2).join('.') : '';
+        
+        fingerprint.unshift(`${tagName}${className ? '.' + className : ''}`);
+        current = current.parentElement;
+    }
+    
+    return fingerprint.join(' > ');
 }
 
 // Generate UUID
@@ -721,18 +876,20 @@ function restoreHighlights() {
             }
             
             if (response && response.highlights) {
-                console.log('Restoring', response.highlights.length, 'highlights');
+                console.log('Restoring', response.highlights.length, 'highlights for URL:', window.location.href);
                 response.highlights.forEach(highlight => {
+                    console.log('Restoring highlight:', highlight.text, 'with context:', {
+                        before: highlight.context_before ? highlight.context_before.substring(0, 50) + '...' : 'none',
+                        after: highlight.context_after ? highlight.context_after.substring(0, 50) + '...' : 'none'
+                    });
                     restoreHighlight(highlight);
                 });
                 
                 // Set up DOM observer for dynamic content
                 setupDOMObserver();
                 
-                // Retry pending highlights after a delay for dynamic content
-                setTimeout(() => {
-                    retryPendingHighlights();
-                }, 2000);
+                // Retry pending highlights multiple times for dynamic content
+                scheduleRetryAttempts();
             }
         });
     } catch (error) {
@@ -740,7 +897,7 @@ function restoreHighlights() {
     }
 }
 
-// Restore individual highlight
+// Restore individual highlight using multiple strategies
 function restoreHighlight(highlightData) {
     console.log('Attempting to restore highlight:', highlightData);
     
@@ -750,10 +907,242 @@ function restoreHighlight(highlightData) {
         return;
     }
     
+    // Try restoration strategies in order of robustness
+    const strategies = [
+        { name: 'XPath-based', method: restoreHighlightWithXPath },
+        { name: 'CSS selector-based', method: restoreHighlightWithSelector },
+        { name: 'DOM fingerprint-based', method: restoreHighlightWithFingerprint },
+        { name: 'Context-based', method: restoreHighlightWithContext },
+        { name: 'Simple text matching', method: restoreHighlightSimple }
+    ];
+    
+    for (const strategy of strategies) {
+        console.log(`Trying ${strategy.name} restoration...`);
+        
+        if (strategy.method(highlightData)) {
+            console.log(`Successfully restored highlight using ${strategy.name}`);
+            return;
+        }
+    }
+    
+    console.log('Could not restore highlight with any strategy:', highlightData.text);
+    // Add to pending highlights for retry
+    if (!pendingHighlights.find(h => h.id === highlightData.id)) {
+        pendingHighlights.push(highlightData);
+    }
+}
+
+// Restore highlight using XPath (most robust for dynamic content)
+function restoreHighlightWithXPath(highlightData) {
+    const { text, position } = highlightData;
+    
+    if (!position || (!position.startXPath && !position.xpath)) {
+        console.log('No XPath data available');
+        return false;
+    }
+    
+    try {
+        // Try new format first, then fall back to old format
+        const xpath = position.startXPath || position.xpath;
+        
+        const result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+        const targetElement = result.singleNodeValue;
+        
+        if (!targetElement) {
+            console.log('XPath element not found:', xpath);
+            return false;
+        }
+        
+        // Find the text within the element
+        const textContent = targetElement.textContent || '';
+        const textIndex = textContent.indexOf(text);
+        
+        if (textIndex === -1) {
+            console.log('Text not found in XPath element');
+            return false;
+        }
+        
+        // Create range and highlight
+        const walker = document.createTreeWalker(
+            targetElement,
+            NodeFilter.SHOW_TEXT,
+            null,
+            false
+        );
+        
+        let currentIndex = 0;
+        let textNode = walker.nextNode();
+        
+        while (textNode) {
+            const nodeLength = textNode.textContent.length;
+            
+            if (currentIndex + nodeLength > textIndex) {
+                const startOffset = textIndex - currentIndex;
+                const endOffset = Math.min(startOffset + text.length, nodeLength);
+                
+                if (textNode.textContent.substring(startOffset, endOffset) === text.substring(0, endOffset - startOffset)) {
+                    return createHighlightElement(textNode, startOffset, text.substring(0, endOffset - startOffset), highlightData);
+                }
+            }
+            
+            currentIndex += nodeLength;
+            textNode = walker.nextNode();
+        }
+        
+        return false;
+    } catch (error) {
+        console.error('Error in XPath restoration:', error);
+        return false;
+    }
+}
+
+// Restore highlight using CSS selector
+function restoreHighlightWithSelector(highlightData) {
+    const { text, position } = highlightData;
+    
+    if (!position || !position.startSelector) {
+        console.log('No CSS selector data available');
+        return false;
+    }
+    
+    try {
+        const targetElement = document.querySelector(position.startSelector);
+        
+        if (!targetElement) {
+            console.log('CSS selector element not found:', position.startSelector);
+            return false;
+        }
+        
+        // Find the text within the element
+        const textContent = targetElement.textContent || '';
+        const textIndex = textContent.indexOf(text);
+        
+        if (textIndex === -1) {
+            console.log('Text not found in CSS selector element');
+            return false;
+        }
+        
+        // Create range and highlight
+        const walker = document.createTreeWalker(
+            targetElement,
+            NodeFilter.SHOW_TEXT,
+            null,
+            false
+        );
+        
+        let currentIndex = 0;
+        let textNode = walker.nextNode();
+        
+        while (textNode) {
+            const nodeLength = textNode.textContent.length;
+            
+            if (currentIndex + nodeLength > textIndex) {
+                const startOffset = textIndex - currentIndex;
+                const endOffset = Math.min(startOffset + text.length, nodeLength);
+                
+                if (textNode.textContent.substring(startOffset, endOffset) === text.substring(0, endOffset - startOffset)) {
+                    return createHighlightElement(textNode, startOffset, text.substring(0, endOffset - startOffset), highlightData);
+                }
+            }
+            
+            currentIndex += nodeLength;
+            textNode = walker.nextNode();
+        }
+        
+        return false;
+    } catch (error) {
+        console.error('Error in CSS selector restoration:', error);
+        return false;
+    }
+}
+
+// Restore highlight using DOM fingerprint
+function restoreHighlightWithFingerprint(highlightData) {
+    const { text, position } = highlightData;
+    
+    if (!position || !position.domFingerprint) {
+        console.log('No DOM fingerprint data available');
+        return false;
+    }
+    
+    try {
+        // Find elements matching the fingerprint pattern
+        const fingerprintParts = position.domFingerprint.split(' > ');
+        const lastPart = fingerprintParts[fingerprintParts.length - 1];
+        
+        // Create a rough CSS selector from the fingerprint
+        const selectorParts = fingerprintParts.map(part => {
+            if (part.includes('.')) {
+                return part.replace(/\./g, '.');
+            }
+            return part;
+        });
+        
+        const candidates = document.querySelectorAll(selectorParts.join(' '));
+        
+        for (const candidate of candidates) {
+            const textContent = candidate.textContent || '';
+            const textIndex = textContent.indexOf(text);
+            
+            if (textIndex !== -1) {
+                // Verify the context matches
+                if (position.surroundingText) {
+                    const beforeText = textContent.substring(Math.max(0, textIndex - 50), textIndex);
+                    const afterText = textContent.substring(textIndex + text.length, textIndex + text.length + 50);
+                    
+                    if (beforeText.includes(position.surroundingText.before) || 
+                        afterText.includes(position.surroundingText.after)) {
+                        
+                        // Create range and highlight
+                        const walker = document.createTreeWalker(
+                            candidate,
+                            NodeFilter.SHOW_TEXT,
+                            null,
+                            false
+                        );
+                        
+                        let currentIndex = 0;
+                        let textNode = walker.nextNode();
+                        
+                        while (textNode) {
+                            const nodeLength = textNode.textContent.length;
+                            
+                            if (currentIndex + nodeLength > textIndex) {
+                                const startOffset = textIndex - currentIndex;
+                                const endOffset = Math.min(startOffset + text.length, nodeLength);
+                                
+                                if (textNode.textContent.substring(startOffset, endOffset) === text.substring(0, endOffset - startOffset)) {
+                                    return createHighlightElement(textNode, startOffset, text.substring(0, endOffset - startOffset), highlightData);
+                                }
+                            }
+                            
+                            currentIndex += nodeLength;
+                            textNode = walker.nextNode();
+                        }
+                    }
+                }
+            }
+        }
+        
+        return false;
+    } catch (error) {
+        console.error('Error in DOM fingerprint restoration:', error);
+        return false;
+    }
+}
+
+// Restore highlight using context for better accuracy
+function restoreHighlightWithContext(highlightData) {
+    const { text, context_before, context_after } = highlightData;
+    
+    // If we don't have context, skip this method
+    if (!context_before && !context_after) {
+        return false;
+    }
+    
     const walker = document.createTreeWalker(
         document.body,
         NodeFilter.SHOW_TEXT,
-        // Skip text nodes that are already inside highlights
         (node) => {
             if (node.parentElement && node.parentElement.closest('.lumos-highlight')) {
                 return NodeFilter.FILTER_REJECT;
@@ -764,57 +1153,220 @@ function restoreHighlight(highlightData) {
     );
     
     let node;
-    let found = false;
     while (node = walker.nextNode()) {
-        const text = node.textContent;
-        const highlightText = highlightData.text;
+        const nodeText = node.textContent;
         
-        if (text.includes(highlightText)) {
-            console.log('Found matching text:', highlightText, 'in node:', text);
-            const index = text.indexOf(highlightText);
-            if (index !== -1) {
-                const range = document.createRange();
-                range.setStart(node, index);
-                range.setEnd(node, index + highlightText.length);
-                
-                const highlightElement = document.createElement('span');
-                highlightElement.className = `lumos-highlight lumos-highlight-${highlightData.color}`;
-                highlightElement.setAttribute('data-highlight-id', highlightData.id);
-                highlightElement.setAttribute('data-highlight-color', highlightData.color);
-                
-                // Apply current styles
-                applyStylesToHighlight(highlightElement);
-                
-                try {
-                    // Validate range before restoring
-                    if (range.collapsed) {
-                        console.log('Range is collapsed, skipping');
-                        continue;
-                    }
-                    
-                    range.surroundContents(highlightElement);
-                    console.log('Successfully restored highlight');
-                    found = true;
-                    break;
-                } catch (error) {
-                    console.error('Error restoring highlight:', error);
-                    // Clean up failed highlight element
-                    if (highlightElement.parentNode) {
-                        highlightElement.parentNode.removeChild(highlightElement);
-                    }
-                    continue;
-                }
-            }
+        // Find the highlight text in this node
+        const highlightIndex = nodeText.indexOf(text);
+        if (highlightIndex === -1) continue;
+        
+        // Get surrounding context from the DOM
+        const contextBefore = getContextAroundNode(node, 'before', 200);
+        const contextAfter = getContextAroundNode(node, 'after', 200);
+        
+        // Check if the context matches (fuzzy matching)
+        const contextMatch = checkContextMatch(
+            contextBefore, contextAfter,
+            context_before, context_after
+        );
+        
+        if (contextMatch) {
+            console.log('Found highlight with matching context');
+            return createHighlightElement(node, highlightIndex, text, highlightData);
         }
     }
     
-    if (!found) {
-        console.log('Could not find text to restore highlight:', highlightData.text);
-        // Add to pending highlights for retry
-        if (!pendingHighlights.find(h => h.id === highlightData.id)) {
-            pendingHighlights.push(highlightData);
+    return false;
+}
+
+// Simple text matching restoration (fallback)
+function restoreHighlightSimple(highlightData) {
+    const walker = document.createTreeWalker(
+        document.body,
+        NodeFilter.SHOW_TEXT,
+        (node) => {
+            if (node.parentElement && node.parentElement.closest('.lumos-highlight')) {
+                return NodeFilter.FILTER_REJECT;
+            }
+            return NodeFilter.FILTER_ACCEPT;
+        },
+        false
+    );
+    
+    let node;
+    while (node = walker.nextNode()) {
+        const nodeText = node.textContent;
+        const highlightIndex = nodeText.indexOf(highlightData.text);
+        
+        if (highlightIndex !== -1) {
+            console.log('Found matching text:', highlightData.text);
+            return createHighlightElement(node, highlightIndex, highlightData.text, highlightData);
         }
     }
+    
+    return false;
+}
+
+// Get context around a text node
+function getContextAroundNode(node, direction, maxLength) {
+    let context = '';
+    let currentNode = node;
+    
+    if (direction === 'before') {
+        // Get text before the current node
+        while (currentNode && context.length < maxLength) {
+            if (currentNode.nodeType === Node.TEXT_NODE) {
+                context = currentNode.textContent + context;
+            }
+            currentNode = getPreviousTextNode(currentNode);
+        }
+    } else {
+        // Get text after the current node
+        while (currentNode && context.length < maxLength) {
+            if (currentNode.nodeType === Node.TEXT_NODE) {
+                context += currentNode.textContent;
+            }
+            currentNode = getNextTextNode(currentNode);
+        }
+    }
+    
+    return context.trim();
+}
+
+// Get previous text node
+function getPreviousTextNode(node) {
+    let walker = document.createTreeWalker(
+        document.body,
+        NodeFilter.SHOW_TEXT,
+        null,
+        false
+    );
+    
+    walker.currentNode = node;
+    return walker.previousNode();
+}
+
+// Get next text node
+function getNextTextNode(node) {
+    let walker = document.createTreeWalker(
+        document.body,
+        NodeFilter.SHOW_TEXT,
+        null,
+        false
+    );
+    
+    walker.currentNode = node;
+    return walker.nextNode();
+}
+
+// Check if context matches using fuzzy matching
+function checkContextMatch(actualBefore, actualAfter, expectedBefore, expectedAfter) {
+    // Simple fuzzy matching - check if we have some overlap
+    const beforeMatch = expectedBefore ? 
+        actualBefore.toLowerCase().includes(expectedBefore.toLowerCase().slice(-50)) ||
+        expectedBefore.toLowerCase().includes(actualBefore.toLowerCase().slice(-50)) : true;
+    
+    const afterMatch = expectedAfter ? 
+        actualAfter.toLowerCase().includes(expectedAfter.toLowerCase().slice(0, 50)) ||
+        expectedAfter.toLowerCase().includes(actualAfter.toLowerCase().slice(0, 50)) : true;
+    
+    return beforeMatch && afterMatch;
+}
+
+// Create highlight element at specified position
+function createHighlightElement(node, index, text, highlightData) {
+    try {
+        const range = document.createRange();
+        range.setStart(node, index);
+        range.setEnd(node, index + text.length);
+        
+        if (range.collapsed) {
+            console.log('Range is collapsed, skipping');
+            return false;
+        }
+        
+        const highlightElement = document.createElement('span');
+        highlightElement.className = `lumos-highlight lumos-highlight-${highlightData.color}`;
+        highlightElement.setAttribute('data-highlight-id', highlightData.id);
+        highlightElement.setAttribute('data-highlight-color', highlightData.color);
+        
+        // Apply current styles
+        applyStylesToHighlight(highlightElement);
+        
+        range.surroundContents(highlightElement);
+        return true;
+    } catch (error) {
+        console.error('Error creating highlight element:', error);
+        return false;
+    }
+}
+
+// Schedule retry attempts for dynamic content
+function scheduleRetryAttempts() {
+    // Multiple retry intervals to handle different types of dynamic content
+    const retryIntervals = [500, 1000, 2000, 3000, 5000, 8000, 12000];
+    
+    retryIntervals.forEach((interval, index) => {
+        setTimeout(() => {
+            if (pendingHighlights.length > 0) {
+                console.log(`Retry attempt ${index + 1}/${retryIntervals.length} after ${interval}ms`);
+                retryPendingHighlights();
+                
+                // Additional check for common dynamic content indicators
+                if (index === retryIntervals.length - 1 && pendingHighlights.length > 0) {
+                    console.log('Final retry attempt - checking for lazy-loaded content');
+                    waitForLazyContent().then(() => {
+                        setTimeout(() => retryPendingHighlights(), 1000);
+                    });
+                }
+            }
+        }, interval);
+    });
+}
+
+// Wait for lazy-loaded content
+async function waitForLazyContent() {
+    return new Promise((resolve) => {
+        // Check for common lazy loading indicators
+        const checkForContent = () => {
+            const commonSelectors = [
+                '[data-lazy-loaded]',
+                '[data-testid]',
+                '.loaded',
+                '[aria-live]',
+                '[data-react-element]'
+            ];
+            
+            for (const selector of commonSelectors) {
+                if (document.querySelector(selector)) {
+                    console.log('Detected potential dynamic content:', selector);
+                    break;
+                }
+            }
+            
+            resolve();
+        };
+        
+        // Use Intersection Observer to detect when content is loaded
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    setTimeout(checkForContent, 500);
+                    observer.disconnect();
+                }
+            });
+        });
+        
+        // Observe the main content area
+        const mainContent = document.querySelector('main, #main, .main, [role="main"]') || document.body;
+        observer.observe(mainContent);
+        
+        // Fallback timeout
+        setTimeout(() => {
+            observer.disconnect();
+            resolve();
+        }, 3000);
+    });
 }
 
 // Set up DOM observer for dynamic content
@@ -823,6 +1375,7 @@ function setupDOMObserver() {
     
     domObserver = new MutationObserver((mutations) => {
         let shouldRetry = false;
+        let significantChange = false;
         
         mutations.forEach(mutation => {
             if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
@@ -831,6 +1384,11 @@ function setupDOMObserver() {
                     if (node.nodeType === Node.TEXT_NODE || 
                         (node.nodeType === Node.ELEMENT_NODE && node.textContent.trim())) {
                         shouldRetry = true;
+                        
+                        // Check for significant content additions
+                        if (node.nodeType === Node.ELEMENT_NODE && node.textContent.length > 100) {
+                            significantChange = true;
+                        }
                     }
                 });
             }
@@ -839,15 +1397,21 @@ function setupDOMObserver() {
         if (shouldRetry && pendingHighlights.length > 0) {
             // Debounce the retry to avoid too many attempts
             clearTimeout(window.retryTimeout);
+            
+            // Use shorter timeout for significant changes
+            const timeout = significantChange ? 100 : 200;
+            
             window.retryTimeout = setTimeout(() => {
+                console.log('DOM change detected, retrying highlight restoration');
                 retryPendingHighlights();
-            }, 500);
+            }, timeout);
         }
     });
     
     domObserver.observe(document.body, {
         childList: true,
-        subtree: true
+        subtree: true,
+        characterData: true // Also watch for text changes
     });
 }
 
@@ -876,51 +1440,19 @@ function attemptRestoreHighlight(highlightData) {
         return true;
     }
     
-    const walker = document.createTreeWalker(
-        document.body,
-        NodeFilter.SHOW_TEXT,
-        (node) => {
-            if (node.parentElement && node.parentElement.closest('.lumos-highlight')) {
-                return NodeFilter.FILTER_REJECT;
-            }
-            return NodeFilter.FILTER_ACCEPT;
-        },
-        false
-    );
+    // Try restoration strategies in order of robustness
+    const strategies = [
+        { name: 'XPath-based', method: restoreHighlightWithXPath },
+        { name: 'CSS selector-based', method: restoreHighlightWithSelector },
+        { name: 'DOM fingerprint-based', method: restoreHighlightWithFingerprint },
+        { name: 'Context-based', method: restoreHighlightWithContext },
+        { name: 'Simple text matching', method: restoreHighlightSimple }
+    ];
     
-    let node;
-    while (node = walker.nextNode()) {
-        const text = node.textContent;
-        const highlightText = highlightData.text;
-        
-        if (text.includes(highlightText)) {
-            const index = text.indexOf(highlightText);
-            if (index !== -1) {
-                const range = document.createRange();
-                range.setStart(node, index);
-                range.setEnd(node, index + highlightText.length);
-                
-                const highlightElement = document.createElement('span');
-                highlightElement.className = `lumos-highlight lumos-highlight-${highlightData.color}`;
-                highlightElement.setAttribute('data-highlight-id', highlightData.id);
-                highlightElement.setAttribute('data-highlight-color', highlightData.color);
-                
-                // Apply current styles
-                applyStylesToHighlight(highlightElement);
-                
-                try {
-                    if (!range.collapsed) {
-                        range.surroundContents(highlightElement);
-                        console.log('Successfully restored pending highlight:', highlightData.text);
-                        return true;
-                    }
-                } catch (error) {
-                    console.error('Error restoring pending highlight:', error);
-                    if (highlightElement.parentNode) {
-                        highlightElement.parentNode.removeChild(highlightElement);
-                    }
-                }
-            }
+    for (const strategy of strategies) {
+        if (strategy.method(highlightData)) {
+            console.log(`Successfully restored pending highlight using ${strategy.name}:`, highlightData.text);
+            return true;
         }
     }
     
