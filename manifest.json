@@ -3,7 +3,7 @@
   "name": "Lumos Highlighter",
   "version": "1.0.0",
   "description": "Highlight text across web pages with five colors, store locally, and export as organized PDF notes",
-  "author": "Wei-Yu Chen <me@weiyu.dev>",
+  "author": "Wei-Yu Chen <me [at] weiyu [dot] dev>",
   "permissions": [
     "storage",
     "activeTab",
@@ -35,5 +35,6 @@
     "16": "assets/icons/icon16.png",
     "48": "assets/icons/icon48.png",
     "128": "assets/icons/icon128.png"
-  }
+  },
+  "homepage_url": "https://github.com/aweimeow/lumos-highlighter"
 }
