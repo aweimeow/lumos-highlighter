@@ -441,69 +441,299 @@ function removeHighlight(highlightElement) {
     deleteHighlight(highlightId);
 }
 
-// Get context before selection
+// Get context before selection using multiple robust strategies
 function getContextBefore(range) {
     try {
-        // Get the paragraph or container element
-        let container = range.startContainer;
-        if (container.nodeType === Node.TEXT_NODE) {
-            container = container.parentElement;
+        // Strategy 1: Direct text node traversal from selection start
+        const strategy1Result = getContextBeforeByTextNodeTraversal(range);
+        if (strategy1Result) {
+            console.log('getContextBefore - Strategy 1 (text node traversal) succeeded:', strategy1Result);
+            return strategy1Result;
         }
         
-        // Find the most appropriate text container, avoiding ad containers
-        const textElement = findBestTextContainer(container);
-        
-        // Get visible text content only
-        const fullText = getVisibleTextContent(textElement);
-        const selectedText = range.toString();
-        const selectedIndex = fullText.indexOf(selectedText);
-        
-        if (selectedIndex > 0) {
-            const beforeText = fullText.substring(0, selectedIndex);
-            const words = beforeText.split(/\s+/).filter(word => word.trim().length > 0);
-            const last30Words = words.slice(-30).join(' ');
-            const cleanedText = cleanContextText(last30Words);
-            console.log('Context before:', cleanedText); // Debug log
-            return cleanedText;
+        // Strategy 2: DOM walker approach
+        const strategy2Result = getContextBeforeByDOMWalker(range);
+        if (strategy2Result) {
+            console.log('getContextBefore - Strategy 2 (DOM walker) succeeded:', strategy2Result);
+            return strategy2Result;
         }
+        
+        // Strategy 3: Simple container-based approach (fallback)
+        const strategy3Result = getContextBeforeByContainer(range);
+        if (strategy3Result) {
+            console.log('getContextBefore - Strategy 3 (container-based) succeeded:', strategy3Result);
+            return strategy3Result;
+        }
+        
+        console.log('getContextBefore - All strategies failed');
+        return '';
     } catch (error) {
         console.error('Error getting context before:', error);
+        return '';
     }
-    
-    return '';
 }
 
-// Get context after selection
-function getContextAfter(range) {
+// Strategy 1: Direct text node traversal
+function getContextBeforeByTextNodeTraversal(range) {
     try {
-        // Get the paragraph or container element
-        let container = range.endContainer;
-        if (container.nodeType === Node.TEXT_NODE) {
+        const startContainer = range.startContainer;
+        const startOffset = range.startOffset;
+        
+        let contextText = '';
+        let currentNode = startContainer;
+        
+        // If we're in a text node, get the text before the selection
+        if (currentNode.nodeType === Node.TEXT_NODE) {
+            const textBefore = currentNode.textContent.substring(0, startOffset);
+            contextText = textBefore + contextText;
+        }
+        
+        // Walk backwards through text nodes to collect context
+        let wordsCollected = 0;
+        const maxWords = 30;
+        
+        while (wordsCollected < maxWords) {
+            const previousTextNode = getPreviousTextNode(currentNode);
+            if (!previousTextNode) break;
+            
+            const nodeText = previousTextNode.textContent || '';
+            if (nodeText.trim().length > 0) {
+                contextText = nodeText + ' ' + contextText;
+                wordsCollected += nodeText.split(/\s+/).length;
+            }
+            
+            currentNode = previousTextNode;
+        }
+        
+        // Clean and return the last 30 words
+        const words = contextText.split(/\s+/).filter(word => word.trim().length > 0);
+        const result = words.slice(-30).join(' ').trim();
+        
+        console.log('Strategy 1 - Text node traversal result:', {
+            contextLength: result.length,
+            preview: result.substring(0, 100) + '...'
+        });
+        
+        return result.length > 0 ? result : null;
+    } catch (error) {
+        console.error('Strategy 1 failed:', error);
+        return null;
+    }
+}
+
+// Strategy 2: DOM walker approach
+function getContextBeforeByDOMWalker(range) {
+    try {
+        const startContainer = range.startContainer;
+        const startOffset = range.startOffset;
+        
+        // Create a range that ends at our selection start
+        const contextRange = document.createRange();
+        contextRange.selectNodeContents(document.body);
+        contextRange.setEnd(startContainer, startOffset);
+        
+        // Get the text content of this range
+        const contextText = contextRange.toString();
+        
+        // Get the last 30 words
+        const words = contextText.split(/\s+/).filter(word => word.trim().length > 0);
+        const result = words.slice(-30).join(' ').trim();
+        
+        console.log('Strategy 2 - DOM walker result:', {
+            contextLength: result.length,
+            preview: result.substring(0, 100) + '...'
+        });
+        
+        return result.length > 0 ? result : null;
+    } catch (error) {
+        console.error('Strategy 2 failed:', error);
+        return null;
+    }
+}
+
+// Strategy 3: Container-based approach (original logic, simplified)
+function getContextBeforeByContainer(range) {
+    try {
+        const startContainer = range.startContainer;
+        let container = startContainer.nodeType === Node.TEXT_NODE ? startContainer.parentElement : startContainer;
+        
+        // Try progressively larger containers
+        for (let i = 0; i < 5 && container && container !== document.body; i++) {
+            const fullText = container.textContent || '';
+            const selectedText = range.toString();
+            const selectedIndex = fullText.indexOf(selectedText);
+            
+            if (selectedIndex > 0) {
+                const beforeText = fullText.substring(0, selectedIndex);
+                const words = beforeText.split(/\s+/).filter(word => word.trim().length > 0);
+                const result = words.slice(-30).join(' ').trim();
+                
+                if (result.length > 0) {
+                    console.log('Strategy 3 - Container-based result:', {
+                        containerTag: container.tagName,
+                        contextLength: result.length,
+                        preview: result.substring(0, 100) + '...'
+                    });
+                    return result;
+                }
+            }
+            
             container = container.parentElement;
         }
         
-        // Find the most appropriate text container, avoiding ad containers
-        const textElement = findBestTextContainer(container);
-        
-        // Get visible text content only
-        const fullText = getVisibleTextContent(textElement);
-        const selectedText = range.toString();
-        const selectedIndex = fullText.indexOf(selectedText);
-        
-        if (selectedIndex >= 0) {
-            const afterStartIndex = selectedIndex + selectedText.length;
-            const afterText = fullText.substring(afterStartIndex);
-            const words = afterText.split(/\s+/).filter(word => word.trim().length > 0);
-            const first30Words = words.slice(0, 30).join(' ');
-            const cleanedText = cleanContextText(first30Words);
-            console.log('Context after:', cleanedText); // Debug log
-            return cleanedText;
+        return null;
+    } catch (error) {
+        console.error('Strategy 3 failed:', error);
+        return null;
+    }
+}
+
+// Get context after selection using multiple robust strategies
+function getContextAfter(range) {
+    try {
+        // Strategy 1: Direct text node traversal from selection end
+        const strategy1Result = getContextAfterByTextNodeTraversal(range);
+        if (strategy1Result) {
+            console.log('getContextAfter - Strategy 1 (text node traversal) succeeded:', strategy1Result);
+            return strategy1Result;
         }
+        
+        // Strategy 2: DOM walker approach
+        const strategy2Result = getContextAfterByDOMWalker(range);
+        if (strategy2Result) {
+            console.log('getContextAfter - Strategy 2 (DOM walker) succeeded:', strategy2Result);
+            return strategy2Result;
+        }
+        
+        // Strategy 3: Simple container-based approach (fallback)
+        const strategy3Result = getContextAfterByContainer(range);
+        if (strategy3Result) {
+            console.log('getContextAfter - Strategy 3 (container-based) succeeded:', strategy3Result);
+            return strategy3Result;
+        }
+        
+        console.log('getContextAfter - All strategies failed');
+        return '';
     } catch (error) {
         console.error('Error getting context after:', error);
+        return '';
     }
-    
-    return '';
+}
+
+// Strategy 1: Direct text node traversal for after context
+function getContextAfterByTextNodeTraversal(range) {
+    try {
+        const endContainer = range.endContainer;
+        const endOffset = range.endOffset;
+        
+        let contextText = '';
+        let currentNode = endContainer;
+        
+        // If we're in a text node, get the text after the selection
+        if (currentNode.nodeType === Node.TEXT_NODE) {
+            const textAfter = currentNode.textContent.substring(endOffset);
+            contextText = contextText + textAfter;
+        }
+        
+        // Walk forwards through text nodes to collect context
+        let wordsCollected = 0;
+        const maxWords = 30;
+        
+        while (wordsCollected < maxWords) {
+            const nextTextNode = getNextTextNode(currentNode);
+            if (!nextTextNode) break;
+            
+            const nodeText = nextTextNode.textContent || '';
+            if (nodeText.trim().length > 0) {
+                contextText = contextText + ' ' + nodeText;
+                wordsCollected += nodeText.split(/\s+/).length;
+            }
+            
+            currentNode = nextTextNode;
+        }
+        
+        // Clean and return the first 30 words
+        const words = contextText.split(/\s+/).filter(word => word.trim().length > 0);
+        const result = words.slice(0, 30).join(' ').trim();
+        
+        console.log('Strategy 1 - Text node traversal result (after):', {
+            contextLength: result.length,
+            preview: result.substring(0, 100) + '...'
+        });
+        
+        return result.length > 0 ? result : null;
+    } catch (error) {
+        console.error('Strategy 1 failed (after):', error);
+        return null;
+    }
+}
+
+// Strategy 2: DOM walker approach for after context
+function getContextAfterByDOMWalker(range) {
+    try {
+        const endContainer = range.endContainer;
+        const endOffset = range.endOffset;
+        
+        // Create a range that starts at our selection end and goes to the end of the document
+        const contextRange = document.createRange();
+        contextRange.setStart(endContainer, endOffset);
+        contextRange.setEndAfter(document.body);
+        
+        // Get the text content of this range
+        const contextText = contextRange.toString();
+        
+        // Get the first 30 words
+        const words = contextText.split(/\s+/).filter(word => word.trim().length > 0);
+        const result = words.slice(0, 30).join(' ').trim();
+        
+        console.log('Strategy 2 - DOM walker result (after):', {
+            contextLength: result.length,
+            preview: result.substring(0, 100) + '...'
+        });
+        
+        return result.length > 0 ? result : null;
+    } catch (error) {
+        console.error('Strategy 2 failed (after):', error);
+        return null;
+    }
+}
+
+// Strategy 3: Container-based approach for after context
+function getContextAfterByContainer(range) {
+    try {
+        const endContainer = range.endContainer;
+        let container = endContainer.nodeType === Node.TEXT_NODE ? endContainer.parentElement : endContainer;
+        
+        // Try progressively larger containers
+        for (let i = 0; i < 5 && container && container !== document.body; i++) {
+            const fullText = container.textContent || '';
+            const selectedText = range.toString();
+            const selectedIndex = fullText.indexOf(selectedText);
+            
+            if (selectedIndex >= 0) {
+                const afterStartIndex = selectedIndex + selectedText.length;
+                const afterText = fullText.substring(afterStartIndex);
+                const words = afterText.split(/\s+/).filter(word => word.trim().length > 0);
+                const result = words.slice(0, 30).join(' ').trim();
+                
+                if (result.length > 0) {
+                    console.log('Strategy 3 - Container-based result (after):', {
+                        containerTag: container.tagName,
+                        contextLength: result.length,
+                        preview: result.substring(0, 100) + '...'
+                    });
+                    return result;
+                }
+            }
+            
+            container = container.parentElement;
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Strategy 3 failed (after):', error);
+        return null;
+    }
 }
 
 // Find the best text container, avoiding ad and script containers
@@ -590,45 +820,50 @@ function getVisibleTextContent(element) {
 function cleanContextText(text) {
     if (!text) return '';
     
-    // First pass: Remove obvious code blocks and structures
+    // First pass: Remove only obvious code/technical content but preserve regular text
     let cleaned = text
-        // Remove complete JavaScript/code blocks
-        .replace(/\b(function|var|let|const|if|for|while|return)\b[^.]*?[;}]/g, '')
+        // Remove complete JavaScript/code blocks (more conservative)
+        .replace(/\b(function|var|let|const)\s+\w+\s*[=\(][^;{}]*[;}]/g, '')
         .replace(/window\s*[=.\[].+?[;\]]/g, '')
-        .replace(/\w+\s*=\s*\w+\s*\|\|\s*[^;]+;/g, '')
-        // Remove advertising patterns
+        // Remove advertising patterns (specific ones)
         .replace(/triggerPrebid[^"']*["']?\s*[^,}]*/gi, '')
         .replace(/(labelClasses|adLocation|trackingKey|renderAd|observeFromUAC|pageId)[^,}]*/gi, '')
-        // Remove JSON-like patterns
-        .replace(/['"]\w+['"]:\s*[^,}]+/g, '')
-        .replace(/:\s*(true|false|null|\d+)/g, '')
-        // Remove URLs and paths
+        // Remove JSON-like patterns (more conservative)
+        .replace(/['"]\w+['"]:\s*[^,}]+,?\s*/g, '')
+        // Remove URLs (but keep domain names in text)
         .replace(/https?:\/\/[^\s"']+/g, '')
-        .replace(/\/[\w\/-]+\.[\w]+/g, '')
-        // Remove CSS-like content
-        .replace(/[a-zA-Z-]+:\s*[^;]+;/g, '')
+        // Remove CSS-like content (more conservative)
+        .replace(/[a-zA-Z-]+:\s*[^;]+;\s*/g, '')
         .replace(/\{[^}]*\}/g, '')
-        .replace(/\[[^\]]*\]/g, '')
-        // Remove function calls and code structures
-        .replace(/\w+\([^)]*\)/g, '')
-        .replace(/\w+\.\w+/g, '')
-        // Remove symbols and punctuation that are code-like
-        .replace(/[{}[\]();,=&|'"]+/g, ' ')
+        // Remove function calls (more conservative)
+        .replace(/\w+\([^)]*\)\s*[;,]?/g, '')
+        // Clean up excessive punctuation but preserve sentence structure
+        .replace(/[{}[\]();,=&|'"]{2,}/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
     
-    // Second pass: Keep only sentences with real words
+    // Second pass: Filter words more conservatively
     const words = cleaned.split(/\s+/).filter(word => {
-        // Keep words that look like real English words
-        return word.length >= 2 && 
-               /^[a-zA-Z]/.test(word) && // Starts with letter
-               !/^[A-Z]{3,}$/.test(word) && // Not all caps (likely acronym/code)
-               !/\d/.test(word) && // No numbers
-               word.length <= 20; // Reasonable word length
+        // Remove empty words
+        if (!word.trim()) return false;
+        
+        // Keep words that contain letters (more permissive)
+        return word.length >= 1 && 
+               /[a-zA-Z]/.test(word) && // Contains at least one letter
+               word.length <= 30; // Reasonable word length
     });
     
     // Return up to 30 meaningful words
-    return words.slice(0, 30).join(' ');
+    const result = words.slice(0, 30).join(' ');
+    
+    // Debug log to help troubleshoot
+    console.log('cleanContextText:', {
+        original: text.substring(0, 100) + '...',
+        cleaned: result.substring(0, 100) + '...',
+        wordsKept: words.length
+    });
+    
+    return result;
 }
 
 // Backup context extraction for problematic websites
