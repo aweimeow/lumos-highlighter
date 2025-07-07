@@ -372,10 +372,10 @@ async function exportAllSitesSummary() {
         
         if (!data || !data.websites) {
             console.log('No highlights found');
-            return;
+            // Still open the selection interface even if no data, user will see empty state
         }
         
-        // Create selection interface tab
+        // Create selection interface tab and make it active
         const selectionTab = await chrome.tabs.create({
             url: chrome.runtime.getURL('options/export-selection.html'),
             active: true
@@ -385,7 +385,7 @@ async function exportAllSitesSummary() {
         setTimeout(() => {
             chrome.tabs.sendMessage(selectionTab.id, {
                 action: 'initExportSelection',
-                data: data
+                data: data || { websites: {}, metadata: { total_highlights: 0 } }
             });
         }, 1000);
         
@@ -427,10 +427,10 @@ async function getExportSelectionData() {
 // Generate PDF from highlight data
 async function generatePDF(data, type) {
     try {
-        // Create a new tab with the PDF generator
+        // Create a new tab with the PDF generator and make it active
         const pdfTab = await chrome.tabs.create({
             url: chrome.runtime.getURL('options/pdf-export.html'),
-            active: false
+            active: true
         });
         
         // Wait for the tab to load, then send the data

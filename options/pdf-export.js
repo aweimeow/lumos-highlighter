@@ -37,10 +37,16 @@ function generatePDFContent(data, type) {
     // Add print button and controls
     addPrintControls();
     
-    // Auto-trigger print dialog after content is loaded
+    // Auto-trigger print dialog after content is loaded with better UX
     setTimeout(() => {
-        window.print();
-    }, 500);
+        // Focus the window to ensure it's active
+        window.focus();
+        
+        // Add a brief delay to ensure everything is rendered
+        setTimeout(() => {
+            window.print();
+        }, 200);
+    }, 800);
 }
 
 function addPrintControls() {
@@ -219,10 +225,13 @@ function capitalizeFirst(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-// Show loading message initially
+// Show loading message initially with better UX
 document.body.innerHTML = `
     <div class="loading">
         <h2>🔆 Lumos Highlighter</h2>
         <p>Generating PDF export...</p>
+        <p style="font-size: 0.9em; color: #888; margin-top: 10px;">
+            Print dialog will open automatically when ready
+        </p>
     </div>
 `;
