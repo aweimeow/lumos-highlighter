@@ -28,6 +28,13 @@ chrome.runtime.onInstalled.addListener(() => {
     });
 
     chrome.contextMenus.create({
+        id: 'manage-highlights',
+        parentId: 'lumos-highlighter',
+        title: 'Manage highlights',
+        contexts: ['page']
+    });
+
+    chrome.contextMenus.create({
         id: 'remove-all-highlights',
         parentId: 'lumos-highlighter',
         title: 'Remove all highlights from page',
@@ -43,6 +50,9 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
             break;
         case 'export-all-sites-summary':
             exportAllSitesSummary();
+            break;
+        case 'manage-highlights':
+            openManagementInterface();
             break;
         case 'remove-all-highlights':
             removeAllHighlightsFromPage(tab);
@@ -457,6 +467,31 @@ async function removeAllHighlightsFromPage(tab) {
         
     } catch (error) {
         console.error('Error removing all highlights from page:', error);
+    }
+}
+
+// Open management interface
+async function openManagementInterface() {
+    try {
+        const result = await chrome.storage.local.get(['lumosHighlights']);
+        const data = result.lumosHighlights;
+        
+        // Create management interface tab and make it active
+        const managementTab = await chrome.tabs.create({
+            url: chrome.runtime.getURL('options/management.html'),
+            active: true
+        });
+        
+        // Wait for the tab to load, then send the data
+        setTimeout(() => {
+            chrome.tabs.sendMessage(managementTab.id, {
+                action: 'initManagement',
+                data: data || { websites: {}, metadata: { total_highlights: 0 } }
+            });
+        }, 1000);
+        
+    } catch (error) {
+        console.error('Error opening management interface:', error);
     }
 }
 
