@@ -473,11 +473,18 @@ function getContextBefore(range) {
     }
 }
 
-// Strategy 1: Direct text node traversal
+// Strategy 1: Local text node traversal (limited scope)
 function getContextBeforeByTextNodeTraversal(range) {
     try {
         const startContainer = range.startContainer;
         const startOffset = range.startOffset;
+        
+        // Find the content container to limit our search scope
+        const contentContainer = findNearestContentContainer(startContainer);
+        if (!contentContainer) {
+            console.log('Strategy 1 - No content container found for traversal');
+            return null;
+        }
         
         let contextText = '';
         let currentNode = startContainer;
@@ -488,28 +495,33 @@ function getContextBeforeByTextNodeTraversal(range) {
             contextText = textBefore + contextText;
         }
         
-        // Walk backwards through text nodes to collect context
+        // Walk backwards through text nodes but stay within the content container
         let wordsCollected = 0;
         const maxWords = 30;
+        let nodesTraversed = 0;
+        const maxNodes = 20; // Limit the number of nodes to traverse
         
-        while (wordsCollected < maxWords) {
-            const previousTextNode = getPreviousTextNode(currentNode);
+        while (wordsCollected < maxWords && nodesTraversed < maxNodes) {
+            const previousTextNode = getPreviousTextNodeInContainer(currentNode, contentContainer);
             if (!previousTextNode) break;
             
             const nodeText = previousTextNode.textContent || '';
-            if (nodeText.trim().length > 0) {
+            if (nodeText.trim().length > 0 && !isNonContentText(nodeText)) {
                 contextText = nodeText + ' ' + contextText;
                 wordsCollected += nodeText.split(/\s+/).length;
             }
             
             currentNode = previousTextNode;
+            nodesTraversed++;
         }
         
         // Clean and return the last 30 words
         const words = contextText.split(/\s+/).filter(word => word.trim().length > 0);
         const result = words.slice(-30).join(' ').trim();
         
-        console.log('Strategy 1 - Text node traversal result:', {
+        console.log('Strategy 1 - Local text node result:', {
+            containerTag: contentContainer.tagName,
+            nodesTraversed: nodesTraversed,
             contextLength: result.length,
             preview: result.substring(0, 100) + '...'
         });
@@ -521,25 +533,35 @@ function getContextBeforeByTextNodeTraversal(range) {
     }
 }
 
-// Strategy 2: DOM walker approach
+// Strategy 2: Local content area approach (more focused)
 function getContextBeforeByDOMWalker(range) {
     try {
         const startContainer = range.startContainer;
         const startOffset = range.startOffset;
         
-        // Create a range that ends at our selection start
+        // Find the closest content container (article, main, or paragraph-like element)
+        const contentContainer = findNearestContentContainer(startContainer);
+        
+        if (!contentContainer) {
+            console.log('Strategy 2 - No content container found');
+            return null;
+        }
+        
+        // Create a range within the content container that ends at our selection start
         const contextRange = document.createRange();
-        contextRange.selectNodeContents(document.body);
+        contextRange.setStart(contentContainer, 0);
         contextRange.setEnd(startContainer, startOffset);
         
-        // Get the text content of this range
+        // Get the text content of this limited range
         const contextText = contextRange.toString();
         
-        // Get the last 30 words
+        // Get the last 30 words from the content area only
         const words = contextText.split(/\s+/).filter(word => word.trim().length > 0);
         const result = words.slice(-30).join(' ').trim();
         
-        console.log('Strategy 2 - DOM walker result:', {
+        console.log('Strategy 2 - Local content result:', {
+            containerTag: contentContainer.tagName,
+            containerClass: contentContainer.className,
             contextLength: result.length,
             preview: result.substring(0, 100) + '...'
         });
@@ -620,11 +642,18 @@ function getContextAfter(range) {
     }
 }
 
-// Strategy 1: Direct text node traversal for after context
+// Strategy 1: Local text node traversal for after context (limited scope)
 function getContextAfterByTextNodeTraversal(range) {
     try {
         const endContainer = range.endContainer;
         const endOffset = range.endOffset;
+        
+        // Find the content container to limit our search scope
+        const contentContainer = findNearestContentContainer(endContainer);
+        if (!contentContainer) {
+            console.log('Strategy 1 - No content container found for traversal (after)');
+            return null;
+        }
         
         let contextText = '';
         let currentNode = endContainer;
@@ -635,28 +664,33 @@ function getContextAfterByTextNodeTraversal(range) {
             contextText = contextText + textAfter;
         }
         
-        // Walk forwards through text nodes to collect context
+        // Walk forwards through text nodes but stay within the content container
         let wordsCollected = 0;
         const maxWords = 30;
+        let nodesTraversed = 0;
+        const maxNodes = 20; // Limit the number of nodes to traverse
         
-        while (wordsCollected < maxWords) {
-            const nextTextNode = getNextTextNode(currentNode);
+        while (wordsCollected < maxWords && nodesTraversed < maxNodes) {
+            const nextTextNode = getNextTextNodeInContainer(currentNode, contentContainer);
             if (!nextTextNode) break;
             
             const nodeText = nextTextNode.textContent || '';
-            if (nodeText.trim().length > 0) {
+            if (nodeText.trim().length > 0 && !isNonContentText(nodeText)) {
                 contextText = contextText + ' ' + nodeText;
                 wordsCollected += nodeText.split(/\s+/).length;
             }
             
             currentNode = nextTextNode;
+            nodesTraversed++;
         }
         
         // Clean and return the first 30 words
         const words = contextText.split(/\s+/).filter(word => word.trim().length > 0);
         const result = words.slice(0, 30).join(' ').trim();
         
-        console.log('Strategy 1 - Text node traversal result (after):', {
+        console.log('Strategy 1 - Local text node result (after):', {
+            containerTag: contentContainer.tagName,
+            nodesTraversed: nodesTraversed,
             contextLength: result.length,
             preview: result.substring(0, 100) + '...'
         });
@@ -668,25 +702,35 @@ function getContextAfterByTextNodeTraversal(range) {
     }
 }
 
-// Strategy 2: DOM walker approach for after context
+// Strategy 2: Local content area approach for after context
 function getContextAfterByDOMWalker(range) {
     try {
         const endContainer = range.endContainer;
         const endOffset = range.endOffset;
         
-        // Create a range that starts at our selection end and goes to the end of the document
+        // Find the closest content container (article, main, or paragraph-like element)
+        const contentContainer = findNearestContentContainer(endContainer);
+        
+        if (!contentContainer) {
+            console.log('Strategy 2 - No content container found (after)');
+            return null;
+        }
+        
+        // Create a range within the content container that starts at our selection end
         const contextRange = document.createRange();
         contextRange.setStart(endContainer, endOffset);
-        contextRange.setEndAfter(document.body);
+        contextRange.setEnd(contentContainer, contentContainer.childNodes.length);
         
-        // Get the text content of this range
+        // Get the text content of this limited range
         const contextText = contextRange.toString();
         
-        // Get the first 30 words
+        // Get the first 30 words from the content area only
         const words = contextText.split(/\s+/).filter(word => word.trim().length > 0);
         const result = words.slice(0, 30).join(' ').trim();
         
-        console.log('Strategy 2 - DOM walker result (after):', {
+        console.log('Strategy 2 - Local content result (after):', {
+            containerTag: contentContainer.tagName,
+            containerClass: contentContainer.className,
             contextLength: result.length,
             preview: result.substring(0, 100) + '...'
         });
@@ -734,6 +778,90 @@ function getContextAfterByContainer(range) {
         console.error('Strategy 3 failed (after):', error);
         return null;
     }
+}
+
+// Find the nearest content container (more focused than findBestTextContainer)
+function findNearestContentContainer(element) {
+    let current = element.nodeType === Node.TEXT_NODE ? element.parentElement : element;
+    
+    // Priority selectors for content containers
+    const contentSelectors = [
+        'article',
+        'main',
+        '[role="main"]',
+        '.article',
+        '.content',
+        '.post',
+        '.entry',
+        '.story',
+        'section',
+        'div.text',
+        'div[class*="content"]',
+        'div[class*="article"]',
+        'div[class*="post"]',
+        'div[class*="story"]',
+        'p' // Even a single paragraph can be a content container
+    ];
+    
+    // Avoid these containers
+    const avoidSelectors = [
+        'header', 'footer', 'nav', 'aside',
+        '[class*="ad"]', '[id*="ad"]', '[class*="advertisement"]',
+        '[class*="menu"]', '[class*="sidebar"]', '[class*="navigation"]',
+        '[class*="comment"]', '[class*="reply"]'
+    ];
+    
+    // Walk up the DOM tree to find a content container
+    while (current && current !== document.body) {
+        // Skip if this element should be avoided
+        const shouldAvoid = avoidSelectors.some(selector => {
+            try {
+                return current.matches && current.matches(selector);
+            } catch (e) {
+                return false;
+            }
+        });
+        
+        if (!shouldAvoid) {
+            // Check if this element matches content selectors
+            const isContentContainer = contentSelectors.some(selector => {
+                try {
+                    return current.matches && current.matches(selector);
+                } catch (e) {
+                    return false;
+                }
+            });
+            
+            if (isContentContainer) {
+                // Additional validation: make sure it has substantial text content
+                const textLength = (current.textContent || '').trim().length;
+                if (textLength > 50) { // At least 50 characters
+                    console.log('Found content container:', {
+                        tag: current.tagName,
+                        class: current.className,
+                        textLength: textLength
+                    });
+                    return current;
+                }
+            }
+        }
+        
+        current = current.parentElement;
+    }
+    
+    // Fallback: find the immediate paragraph or div container
+    current = element.nodeType === Node.TEXT_NODE ? element.parentElement : element;
+    while (current && current !== document.body) {
+        if (current.tagName === 'P' || current.tagName === 'DIV') {
+            const textLength = (current.textContent || '').trim().length;
+            if (textLength > 20) {
+                return current;
+            }
+        }
+        current = current.parentElement;
+    }
+    
+    return null;
 }
 
 // Find the best text container, avoiding ad and script containers
@@ -1468,7 +1596,93 @@ function getContextAroundNode(node, direction, maxLength) {
     return context.trim();
 }
 
-// Get previous text node
+// Get previous text node within a specific container
+function getPreviousTextNodeInContainer(node, container) {
+    let walker = document.createTreeWalker(
+        container,
+        NodeFilter.SHOW_TEXT,
+        {
+            acceptNode: function(n) {
+                // Skip text nodes in non-content elements
+                const parent = n.parentElement;
+                if (!parent) return NodeFilter.FILTER_REJECT;
+                
+                // Skip hidden elements
+                const style = window.getComputedStyle(parent);
+                if (style.display === 'none' || style.visibility === 'hidden') {
+                    return NodeFilter.FILTER_REJECT;
+                }
+                
+                // Skip script, style, and navigation elements
+                if (parent.matches('script, style, noscript, nav, header, footer, [class*="ad"], [class*="menu"]')) {
+                    return NodeFilter.FILTER_REJECT;
+                }
+                
+                return NodeFilter.FILTER_ACCEPT;
+            }
+        },
+        false
+    );
+    
+    walker.currentNode = node;
+    return walker.previousNode();
+}
+
+// Get next text node within a specific container
+function getNextTextNodeInContainer(node, container) {
+    let walker = document.createTreeWalker(
+        container,
+        NodeFilter.SHOW_TEXT,
+        {
+            acceptNode: function(n) {
+                // Skip text nodes in non-content elements
+                const parent = n.parentElement;
+                if (!parent) return NodeFilter.FILTER_REJECT;
+                
+                // Skip hidden elements
+                const style = window.getComputedStyle(parent);
+                if (style.display === 'none' || style.visibility === 'hidden') {
+                    return NodeFilter.FILTER_REJECT;
+                }
+                
+                // Skip script, style, and navigation elements
+                if (parent.matches('script, style, noscript, nav, header, footer, [class*="ad"], [class*="menu"]')) {
+                    return NodeFilter.FILTER_REJECT;
+                }
+                
+                return NodeFilter.FILTER_ACCEPT;
+            }
+        },
+        false
+    );
+    
+    walker.currentNode = node;
+    return walker.nextNode();
+}
+
+// Check if text is likely non-content (UI elements, navigation, etc.)
+function isNonContentText(text) {
+    const trimmed = text.trim().toLowerCase();
+    
+    // Skip very short text
+    if (trimmed.length < 3) return true;
+    
+    // Common UI/navigation text patterns
+    const nonContentPatterns = [
+        /^(menu|navigation|nav|click|button|link)$/,
+        /^(login|logout|sign in|sign up|register)$/,
+        /^(home|about|contact|privacy|terms)$/,
+        /^(share|like|follow|subscribe)$/,
+        /^(loading|error|warning|alert)$/,
+        /^(advertisement|sponsored|ads)$/,
+        /^\d+$/, // Pure numbers
+        /^[^\w\u4e00-\u9fff]+$/ // Only punctuation/symbols
+    ];
+    
+    return nonContentPatterns.some(pattern => pattern.test(trimmed));
+}
+
+// Get previous text node (original function kept for compatibility)
 function getPreviousTextNode(node) {
     let walker = document.createTreeWalker(
         document.body,
