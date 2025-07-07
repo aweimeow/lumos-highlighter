@@ -34,6 +34,53 @@ function setupEventListeners() {
     dateFrom.addEventListener('change', applyFilters);
     dateTo.addEventListener('change', applyFilters);
     colorFilter.addEventListener('change', applyFilters);
+    
+    // Set up event delegation for dynamic content
+    const domainList = document.getElementById('domainList');
+    domainList.addEventListener('click', handleDomainListClick);
+}
+
+// Handle clicks in domain list using event delegation
+function handleDomainListClick(event) {
+    const target = event.target;
+    
+    // Handle domain header clicks
+    if (target.closest('.domain-header')) {
+        const domainHeader = target.closest('.domain-header');
+        const domain = domainHeader.getAttribute('data-domain');
+        if (domain) {
+            toggleDomain(domain);
+        }
+        return;
+    }
+    
+    // Handle subpage view button clicks
+    if (target.classList.contains('btn-view')) {
+        const url = target.getAttribute('data-url');
+        if (url) {
+            toggleSubpage(url);
+        }
+        return;
+    }
+    
+    // Handle subpage delete button clicks
+    if (target.classList.contains('btn-delete') && target.closest('.subpage-item')) {
+        const domain = target.getAttribute('data-domain');
+        const url = target.getAttribute('data-url');
+        if (domain && url) {
+            deleteSubpage(domain, url);
+        }
+        return;
+    }
+    
+    // Handle highlight delete button clicks
+    if (target.classList.contains('btn-delete') && target.closest('.highlight-item')) {
+        const highlightId = target.getAttribute('data-highlight-id');
+        if (highlightId) {
+            deleteHighlight(highlightId, target);
+        }
+        return;
+    }
 }
 
 // Handle time range selection change
@@ -358,7 +405,7 @@ function updateDomainList(sortedDomains) {
         
         return `
             <div class="domain-item">
-                <div class="domain-header ${isExpanded ? 'expanded' : ''}" onclick="toggleDomain('${domain}')">
+                <div class="domain-header ${isExpanded ? 'expanded' : ''}" data-domain="${domain}">
                     <div class="domain-info">
                         <div>
                             <div class="domain-name">${domain}</div>
@@ -397,10 +444,10 @@ function generateSubpagesHTML(domain, subpages) {
                 <div class="subpage-info">
                     <div class="subpage-url" title="${subpage.url}">${subpage.title}</div>
                     <div class="subpage-actions">
-                        <button class="btn btn-view" onclick="toggleSubpage('${subpage.url}')">
+                        <button class="btn btn-view" data-url="${subpage.url}">
                             ${isExpanded ? 'Hide' : 'View'} (${subpage.highlights.length})
                         </button>
-                        <button class="btn btn-delete" onclick="deleteSubpage('${domain}', '${subpage.url}')">
+                        <button class="btn btn-delete" data-domain="${domain}" data-url="${subpage.url}">
                             Delete All
                         </button>
                     </div>
@@ -431,14 +478,14 @@ function generateHighlightsHTML(highlights) {
             ` : ''}
             <div class="highlight-meta">
                 <span>${formatDate(highlight.timestamp)}</span>
-                <button class="btn btn-delete" onclick="deleteHighlight('${highlight.id}', this)">Delete</button>
+                <button class="btn btn-delete" data-highlight-id="${highlight.id}">Delete</button>
             </div>
         </div>
     `).join('');
 }
 
 // Toggle domain expansion
-window.toggleDomain = function(domain) {
+function toggleDomain(domain) {
     if (expandedDomains.has(domain)) {
         expandedDomains.delete(domain);
     } else {
@@ -448,7 +495,7 @@ window.toggleDomain = function(domain) {
 }
 
 // Toggle subpage highlights
-window.toggleSubpage = function(url) {
+function toggleSubpage(url) {
     if (expandedSubpages.has(url)) {
         expandedSubpages.delete(url);
     } else {
@@ -458,7 +505,7 @@ window.toggleSubpage = function(url) {
 }
 
 // Delete entire subpage
-window.deleteSubpage = async function(domain, url) {
+async function deleteSubpage(domain, url) {
     if (!confirm(`Are you sure you want to delete all highlights from this page?\n\n${url}`)) {
         return;
     }
@@ -487,7 +534,7 @@ window.deleteSubpage = async function(domain, url) {
 }
 
 // Delete individual highlight
-window.deleteHighlight = async function(highlightId, buttonElement) {
+async function deleteHighlight(highlightId, buttonElement) {
     if (!confirm('Are you sure you want to delete this highlight?')) {
         return;
     }
