@@ -69,9 +69,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             break;
             
         case 'deleteHighlight':
-            deleteHighlight(request.domain, request.highlightId);
-            sendResponse({success: true});
-            break;
+            deleteHighlight(request.domain, request.highlightId).then(() => {
+                sendResponse({success: true});
+            }).catch(error => {
+                console.error('Error in deleteHighlight:', error);
+                sendResponse({success: false, error: error.message});
+            });
+            return true; // Keep message channel open for async response
             
         case 'getHighlights':
             getHighlights(request.domain, request.url).then(highlights => {
@@ -96,9 +100,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             break;
             
         case 'removeAllHighlightsFromPage':
-            removeAllHighlightsFromPageStorage(request.domain, request.url);
-            sendResponse({success: true});
-            break;
+            removeAllHighlightsFromPageStorage(request.domain, request.url).then(() => {
+                sendResponse({success: true});
+            }).catch(error => {
+                console.error('Error in removeAllHighlightsFromPage:', error);
+                sendResponse({success: false, error: error.message});
+            });
+            return true; // Keep message channel open for async response
+            
+        case 'openHighlightInPage':
+            openHighlightInPage(request.url).then(() => {
+                sendResponse({success: true});
+            }).catch(error => {
+                console.error('Error in openHighlightInPage:', error);
+                sendResponse({success: false, error: error.message});
+            });
+            return true; // Keep message channel open for async response
             
         default:
             sendResponse({error: 'Unknown action'});
@@ -553,5 +570,21 @@ async function removeAllHighlightsFromPageStorage(domain, url) {
         
     } catch (error) {
         console.error('Error removing highlights from page storage:', error);
+    }
+}
+
+// Open highlight in page with text fragment
+async function openHighlightInPage(url) {
+    try {
+        const tab = await chrome.tabs.create({
+            url: url,
+            active: true
+        });
+        
+        console.log('Opened highlight in page:', url, 'Tab ID:', tab.id);
+        
+    } catch (error) {
+        console.error('Error opening highlight in page:', error);
+        throw error;
     }
 }
