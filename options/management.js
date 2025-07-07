@@ -202,35 +202,138 @@ function updateStatsOverview(data) {
     const totalHighlights = data.metadata.total_highlights;
     const colorStats = data.metadata.color_stats;
     const totalDomains = Object.keys(data.websites).length;
+    
+    // Calculate total pages
+    const totalPages = Object.values(data.websites).reduce((total, site) => {
+        const uniqueUrls = new Set(site.highlights.map(h => h.url));
+        return total + uniqueUrls.size;
+    }, 0);
+
+    // Generate website tooltip (top 10 by highlight count)
+    const websiteTooltip = generateWebsiteTooltip(data.websites);
+    
+    // Generate pages tooltip (top 10 by highlight count)
+    const pagesTooltip = generatePagesTooltip(data.websites);
+    
+    // Generate color chart tooltip
+    const colorTooltip = generateColorTooltip(colorStats);
 
     statsOverview.innerHTML = `
-        <div class="stat-card">
-            <div class="number">${totalDomains}</div>
-            <div class="label">Websites</div>
+        <div class="stat-item">
+            <div class="stat-icon">🌐</div>
+            <div class="stat-number">${totalDomains}</div>
+            <div class="stat-label">Websites</div>
+            <div class="tooltip">
+                <div class="tooltip-content">${websiteTooltip}</div>
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="number">${totalHighlights}</div>
-            <div class="label">Total Highlights</div>
+        <div class="stat-item">
+            <div class="stat-icon">📄</div>
+            <div class="stat-number">${totalPages}</div>
+            <div class="stat-label">Pages</div>
+            <div class="tooltip">
+                <div class="tooltip-content">${pagesTooltip}</div>
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="number">${colorStats.red}</div>
-            <div class="label">Red</div>
+        <div class="stat-item">
+            <div class="stat-icon">🎨</div>
+            <div class="stat-number">${totalHighlights}</div>
+            <div class="stat-label">Highlights</div>
+            <div class="tooltip">
+                <div class="tooltip-content">${colorTooltip}</div>
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="number">${colorStats.orange}</div>
-            <div class="label">Orange</div>
-        </div>
-        <div class="stat-card">
-            <div class="number">${colorStats.yellow}</div>
-            <div class="label">Yellow</div>
-        </div>
-        <div class="stat-card">
-            <div class="number">${colorStats.green}</div>
-            <div class="label">Green</div>
-        </div>
-        <div class="stat-card">
-            <div class="number">${colorStats.blue}</div>
-            <div class="label">Blue</div>
+    `;
+}
+
+// Generate website tooltip with top 10 domains
+function generateWebsiteTooltip(websites) {
+    const domainStats = Object.entries(websites).map(([domain, site]) => ({
+        domain,
+        count: site.highlights.length
+    })).sort((a, b) => b.count - a.count).slice(0, 10);
+
+    if (domainStats.length === 0) {
+        return '<div>No websites with highlights</div>';
+    }
+
+    const listItems = domainStats.map(({domain, count}) => 
+        `<li>${domain}: <strong>${count}</strong> highlights</li>`
+    ).join('');
+
+    return `
+        <div><strong>Top Websites (by highlights)</strong></div>
+        <ul class="tooltip-list">
+            ${listItems}
+        </ul>
+    `;
+}
+
+// Generate pages tooltip with top 10 pages
+function generatePagesTooltip(websites) {
+    const pageStats = [];
+    
+    Object.entries(websites).forEach(([domain, site]) => {
+        const pages = {};
+        site.highlights.forEach(highlight => {
+            if (!pages[highlight.url]) {
+                pages[highlight.url] = {
+                    url: highlight.url,
+                    title: highlight.page_title || getPageTitleFromURL(highlight.url),
+                    count: 0
+                };
+            }
+            pages[highlight.url].count++;
+        });
+        
+        Object.values(pages).forEach(page => pageStats.push(page));
+    });
+
+    pageStats.sort((a, b) => b.count - a.count);
+    const top10 = pageStats.slice(0, 10);
+
+    if (top10.length === 0) {
+        return '<div>No pages with highlights</div>';
+    }
+
+    const listItems = top10.map(page => 
+        `<li>${page.title}: <strong>${page.count}</strong> highlights</li>`
+    ).join('');
+
+    return `
+        <div><strong>Top Pages (by highlights)</strong></div>
+        <ul class="tooltip-list">
+            ${listItems}
+        </ul>
+    `;
+}
+
+// Generate color tooltip with bar chart
+function generateColorTooltip(colorStats) {
+    const maxCount = Math.max(...Object.values(colorStats));
+    const colors = {
+        red: '#ff6363',
+        orange: '#ffa500', 
+        yellow: '#ffeb3b',
+        green: '#4caf50',
+        blue: '#2196f3'
+    };
+
+    const colorBars = Object.entries(colorStats).map(([color, count]) => {
+        const height = maxCount > 0 ? Math.max((count / maxCount) * 60, 4) : 4;
+        return `
+            <div class="color-bar">
+                <div class="color-bar-value">${count}</div>
+                <div class="color-bar-fill" style="height: ${height}px; background-color: ${colors[color]};"></div>
+                <div class="color-bar-label">${color}</div>
+            </div>
+        `;
+    }).join('');
+
+    return `
+        <div><strong>Highlights by Color</strong></div>
+        <div class="color-chart">
+            ${colorBars}
         </div>
     `;
 }
@@ -335,7 +438,7 @@ function generateHighlightsHTML(highlights) {
 }
 
 // Toggle domain expansion
-function toggleDomain(domain) {
+window.toggleDomain = function(domain) {
     if (expandedDomains.has(domain)) {
         expandedDomains.delete(domain);
     } else {
@@ -345,7 +448,7 @@ function toggleDomain(domain) {
 }
 
 // Toggle subpage highlights
-function toggleSubpage(url) {
+window.toggleSubpage = function(url) {
     if (expandedSubpages.has(url)) {
         expandedSubpages.delete(url);
     } else {
@@ -355,7 +458,7 @@ function toggleSubpage(url) {
 }
 
 // Delete entire subpage
-async function deleteSubpage(domain, url) {
+window.deleteSubpage = async function(domain, url) {
     if (!confirm(`Are you sure you want to delete all highlights from this page?\n\n${url}`)) {
         return;
     }
@@ -384,7 +487,7 @@ async function deleteSubpage(domain, url) {
 }
 
 // Delete individual highlight
-async function deleteHighlight(highlightId, buttonElement) {
+window.deleteHighlight = async function(highlightId, buttonElement) {
     if (!confirm('Are you sure you want to delete this highlight?')) {
         return;
     }
