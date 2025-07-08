@@ -575,80 +575,190 @@
             font-size: 14px;
         }
 
-        /* Color Filter Dropdown Styles */
-        .color-filter-dropdown {
-            position: relative;
-            width: 100%;
-        }
-
-        .dropdown-button {
+        /* Color Filter Circles - Compact 2025 Design */
+        .color-filter-circles {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background: white;
-            cursor: pointer;
-            font-size: 14px;
-            transition: border-color 0.2s ease;
+            gap: 20px;
+            width: 100%;
+            flex-wrap: wrap;
         }
 
-        .dropdown-button:hover {
-            border-color: #2196f3;
-        }
-
-        .dropdown-arrow {
-            transition: transform 0.2s ease;
-            color: #666;
-        }
-
-        .dropdown-button.open .dropdown-arrow {
-            transform: rotate(180deg);
-        }
-
-        .dropdown-content {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 1px solid #ddd;
-            border-top: none;
-            border-radius: 0 0 4px 4px;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 1000;
-            display: none;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .dropdown-content.show {
-            display: block;
-        }
-
-        .checkbox-item {
+        .color-circles-group {
             display: flex;
+            justify-content: flex-start;
             align-items: center;
-            padding: 8px 12px;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .color-controls {
+            display: flex;
             gap: 8px;
+            align-items: center;
         }
 
-        .checkbox-item:hover {
-            background-color: #f5f5f5;
-        }
-
-        .checkbox-item input[type="checkbox"] {
-            margin: 0;
+        .color-btn {
+            padding: 8px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            color: #374151;
+            font-size: 12px;
+            font-weight: 600;
             cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            white-space: nowrap;
         }
 
-        .checkbox-item .color-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 2px;
+        .color-btn:hover {
+            border-color: #6366f1;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(99, 102, 241, 0.15);
+        }
+
+        .color-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .color-btn.select-all {
+            border-color: #10b981;
+            color: #065f46;
+        }
+
+        .color-btn.select-all:hover {
+            border-color: #059669;
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            box-shadow: 0 4px 8px rgba(16, 185, 129, 0.15);
+        }
+
+        .color-btn.deselect-all {
+            border-color: #ef4444;
+            color: #991b1b;
+        }
+
+        .color-btn.deselect-all:hover {
+            border-color: #dc2626;
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            box-shadow: 0 4px 8px rgba(239, 68, 68, 0.15);
+        }
+
+        .color-circle {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 3px solid transparent;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+        }
+
+        .color-circle input[type="checkbox"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            margin: 0;
+        }
+
+        .color-circle.red { background-color: rgba(255, 99, 99, 0.9); }
+        .color-circle.orange { background-color: rgba(255, 165, 0, 0.9); }
+        .color-circle.yellow { background-color: rgba(255, 235, 59, 0.9); }
+        .color-circle.green { background-color: rgba(76, 175, 80, 0.9); }
+        .color-circle.blue { background-color: rgba(33, 150, 243, 0.9); }
+
+        .color-circle:hover {
+            transform: scale(1.15);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .color-circle:active {
+            transform: scale(1.05);
+        }
+
+        .color-circle.active {
+            border-color: #374151;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 0 0 2px #ffffff;
+        }
+
+        .color-circle:not(.active) {
+            opacity: 0.35;
+            filter: grayscale(0.6);
+        }
+
+        .color-circle:not(.active):hover {
+            opacity: 0.7;
+            filter: grayscale(0.2);
+        }
+
+        /* Tooltip for color circles */
+
+        .color-circle::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 120%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2937;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            z-index: 9999;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: all 0.2s ease;
+        }
+
+        .color-circle::before {
+            content: '';
+            position: absolute;
+            bottom: 110%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid #1f2937;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .color-circle:hover::after,
+        .color-circle:hover::before {
+            opacity: 1;
+            visibility: visible;
+        }
+
+
+        /* Animation for toggle changes */
+        @keyframes toggleBounce {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.2);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .color-circle.animate {
+            animation: toggleBounce 0.3s ease;
         }
 
         /* Export section styles */
@@ -784,41 +894,31 @@
                     </div>
                     <div class="filter-group">
                         <label for="colorFilter">Color Filter</label>
-                        <div class="color-filter-dropdown" id="colorFilterDropdown">
-                            <div class="dropdown-button" id="colorFilterButton">
-                                <span id="colorFilterText">All Colors</span>
-                                <span class="dropdown-arrow">▼</span>
-                            </div>
-                            <div class="dropdown-content" id="colorFilterContent">
-                                <label class="checkbox-item">
-                                    <input type="checkbox" value="all" id="colorAll" checked>
-                                    <span>All Colors</span>
-                                </label>
-                                <label class="checkbox-item">
+                        <div class="color-filter-circles" id="colorFilterCircles">
+                            <div class="color-circles-group">
+                                <div class="color-circle red" data-color="red" data-tooltip="Red - OFF" title="Red - OFF">
                                     <input type="checkbox" value="red" id="colorRed">
-                                    <span class="color-indicator red"></span>
-                                    <span>Red</span>
-                                </label>
-                                <label class="checkbox-item">
+                                </div>
+                                <div class="color-circle orange" data-color="orange" data-tooltip="Orange - OFF" title="Orange - OFF">
                                     <input type="checkbox" value="orange" id="colorOrange">
-                                    <span class="color-indicator orange"></span>
-                                    <span>Orange</span>
-                                </label>
-                                <label class="checkbox-item">
+                                </div>
+                                <div class="color-circle yellow" data-color="yellow" data-tooltip="Yellow - OFF" title="Yellow - OFF">
                                     <input type="checkbox" value="yellow" id="colorYellow">
-                                    <span class="color-indicator yellow"></span>
-                                    <span>Yellow</span>
-                                </label>
-                                <label class="checkbox-item">
+                                </div>
+                                <div class="color-circle green" data-color="green" data-tooltip="Green - OFF" title="Green - OFF">
                                     <input type="checkbox" value="green" id="colorGreen">
-                                    <span class="color-indicator green"></span>
-                                    <span>Green</span>
-                                </label>
-                                <label class="checkbox-item">
+                                </div>
+                                <div class="color-circle blue" data-color="blue" data-tooltip="Blue - OFF" title="Blue - OFF">
                                     <input type="checkbox" value="blue" id="colorBlue">
-                                    <span class="color-indicator blue"></span>
-                                    <span>Blue</span>
-                                </label>
+                                </div>
+                            </div>
+                            <div class="color-controls">
+                                <button class="color-btn select-all" id="selectAllColors" title="Select all colors">
+                                    Select All
+                                </button>
+                                <button class="color-btn deselect-all" id="deselectAllColors" title="Deselect all colors">
+                                    Deselect All
+                                </button>
                             </div>
                         </div>
                     </div>

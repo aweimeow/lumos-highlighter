@@ -40,8 +40,8 @@ function setupEventListeners() {
     dateFrom.addEventListener('change', applyFilters);
     dateTo.addEventListener('change', applyFilters);
     
-    // Set up color filter dropdown
-    setupColorFilterDropdown();
+    // Set up color filter circles
+    setupColorFilterCircles();
     
     // Set up event delegation for dynamic content
     const domainList = document.getElementById('domainList');
@@ -67,6 +67,41 @@ function setupEventListeners() {
 // Handle clicks in domain list using event delegation
 function handleDomainListClick(event) {
     const target = event.target;
+    console.log('Click detected on:', target, 'Classes:', target.classList);
+    
+    // Handle clicks on subpage items (but not on buttons)
+    if (target.closest('.subpage-item') && !target.closest('button') && !target.closest('a')) {
+        const subpageItem = target.closest('.subpage-item');
+        const url = subpageItem.getAttribute('data-url');
+        
+        console.log('Subpage item clicked - url:', url);
+        
+        if (url) {
+            console.log('Toggling subpage:', url);
+            toggleSubpage(url);
+        }
+        return;
+    }
+    
+    // Handle clicks on color blocks (highlight-count area) to expand domain or subpage
+    if (target.closest('.highlight-count')) {
+        const highlightCount = target.closest('.highlight-count');
+        const domain = highlightCount.getAttribute('data-domain');
+        const url = highlightCount.getAttribute('data-url');
+        
+        console.log('Color block clicked - domain:', domain, 'url:', url);
+        
+        if (url) {
+            // This is a subpage-level color block, toggle subpage
+            console.log('Toggling subpage:', url);
+            toggleSubpage(url);
+        } else if (domain) {
+            // This is a domain-level color block, toggle domain
+            console.log('Toggling domain:', domain);
+            toggleDomain(domain);
+        }
+        return;
+    }
     
     // Handle domain header clicks - but not if clicking on buttons
     if (target.closest('.domain-header') && !target.closest('button') && !target.closest('a')) {
@@ -319,96 +354,241 @@ function handleTimeRangeChange() {
     applyFilters();
 }
 
+// Track color selection state in JavaScript
+let colorSelectionState = {
+    red: false,
+    orange: false,
+    yellow: false,
+    green: false,
+    blue: false
+};
+
 // Set up color filter dropdown
-function setupColorFilterDropdown() {
-    const dropdownButton = document.getElementById('colorFilterButton');
-    const dropdownContent = document.getElementById('colorFilterContent');
-    const colorCheckboxes = dropdownContent.querySelectorAll('input[type="checkbox"]');
-    const allCheckbox = document.getElementById('colorAll');
+function setupColorFilterCircles() {
+    const colorCircles = document.querySelectorAll('.color-circle');
+    const selectAllBtn = document.getElementById('selectAllColors');
+    const deselectAllBtn = document.getElementById('deselectAllColors');
     
-    // Toggle dropdown visibility
-    dropdownButton.addEventListener('click', (e) => {
-        e.stopPropagation();
-        dropdownButton.classList.toggle('open');
-        dropdownContent.classList.toggle('show');
+    // Setup click handlers for color circles
+    colorCircles.forEach(circle => {
+        const checkbox = circle.querySelector('input[type="checkbox"]');
+        const color = circle.dataset.color;
+        
+        circle.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log(`\n=================== CLICK ON ${color.toUpperCase()} ===================`);
+            
+            // Check state of ALL checkboxes before toggle
+            const allCheckboxesBefore = document.querySelectorAll('.color-circle input[type="checkbox"]');
+            console.log('STATE BEFORE TOGGLE:');
+            Array.from(allCheckboxesBefore).forEach(cb => {
+                const circleEl = cb.closest('.color-circle');
+                console.log(`  ${cb.value}: checkbox=${cb.checked}, hasActive=${circleEl.classList.contains('active')}`);
+            });
+            
+            toggleColorSelection(color, circle, checkbox);
+            
+            // Check state of ALL checkboxes after toggle
+            const allCheckboxesAfter = document.querySelectorAll('.color-circle input[type="checkbox"]');
+            console.log('STATE AFTER TOGGLE:');
+            Array.from(allCheckboxesAfter).forEach(cb => {
+                const circleEl = cb.closest('.color-circle');
+                console.log(`  ${cb.value}: checkbox=${cb.checked}, hasActive=${circleEl.classList.contains('active')}`);
+            });
+            
+            applyFilters();
+            console.log(`=================== END CLICK ON ${color.toUpperCase()} ===================\n`);
+        });
     });
     
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!dropdownButton.contains(e.target) && !dropdownContent.contains(e.target)) {
-            dropdownButton.classList.remove('open');
-            dropdownContent.classList.remove('show');
+    // Setup Select All button
+    selectAllBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        selectAllColors();
+        applyFilters();
+    });
+    
+    // Setup Deselect All button
+    deselectAllBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        deselectAllColors();
+        applyFilters();
+    });
+    
+    // Synchronize visual state with checkbox state on initialization
+    synchronizeVisualState();
+    
+    // Add debugging to track when checkboxes change
+    setupCheckboxChangeTracking();
+}
+
+function synchronizeVisualState() {
+    const colorCircles = document.querySelectorAll('.color-circle');
+    console.log('=== Synchronizing visual state ===');
+    
+    colorCircles.forEach(circle => {
+        const checkbox = circle.querySelector('input[type="checkbox"]');
+        const color = circle.dataset.color;
+        const colorName = color.charAt(0).toUpperCase() + color.slice(1);
+        
+        console.log(`Syncing ${color}: checkbox=${checkbox.checked}, hasActive=${circle.classList.contains('active')}`);
+        
+        if (checkbox.checked) {
+            // Checkbox is checked, ensure visual state shows active
+            circle.classList.add('active');
+            const tooltipText = `${colorName} - ON`;
+            circle.setAttribute('data-tooltip', tooltipText);
+            circle.setAttribute('title', tooltipText);
+        } else {
+            // Checkbox is unchecked, ensure visual state shows inactive
+            circle.classList.remove('active');
+            const tooltipText = `${colorName} - OFF`;
+            circle.setAttribute('data-tooltip', tooltipText);
+            circle.setAttribute('title', tooltipText);
         }
     });
+}
+
+function setupCheckboxChangeTracking() {
+    const colorCheckboxes = document.querySelectorAll('.color-circle input[type="checkbox"]');
     
-    // Handle checkbox changes
     colorCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', () => {
-            if (checkbox.value === 'all') {
-                handleAllColorsToggle(checkbox.checked);
-            } else {
-                handleColorToggle();
-            }
-            updateColorFilterText();
-            applyFilters();
+        // Track when checkbox changes
+        checkbox.addEventListener('change', (e) => {
+            const stack = new Error().stack;
+            console.log(`🔍 CHECKBOX CHANGE DETECTED: ${checkbox.value} = ${checkbox.checked}`);
+            console.log('Stack trace:', stack);
         });
     });
 }
 
-// Handle "All Colors" toggle
-function handleAllColorsToggle(isChecked) {
-    const colorCheckboxes = document.querySelectorAll('#colorFilterContent input[type="checkbox"]:not(#colorAll)');
+function toggleColorSelection(color, circleElement, checkbox) {
+    const colorName = color.charAt(0).toUpperCase() + color.slice(1);
     
-    if (isChecked) {
-        // Uncheck all individual colors when "All Colors" is selected
-        colorCheckboxes.forEach(checkbox => {
-            checkbox.checked = false;
-        });
+    console.log(`TOGGLE ${color}:`);
+    console.log(`  Before: JS state=${colorSelectionState[color]}, DOM active=${circleElement.classList.contains('active')}, checkbox=${checkbox.checked}`);
+    
+    // Toggle the JavaScript state
+    colorSelectionState[color] = !colorSelectionState[color];
+    
+    console.log(`  After JS toggle: ${color} = ${colorSelectionState[color]}`);
+    
+    // Update DOM to match JavaScript state
+    if (colorSelectionState[color]) {
+        // Activate color
+        console.log(`  Activating ${color} in DOM...`);
+        circleElement.classList.add('active');
+        checkbox.checked = true;
+        const tooltipText = `${colorName} - ON`;
+        circleElement.setAttribute('data-tooltip', tooltipText);
+        circleElement.setAttribute('title', tooltipText);
+    } else {
+        // Deactivate color
+        console.log(`  Deactivating ${color} in DOM...`);
+        circleElement.classList.remove('active');
+        checkbox.checked = false;
+        const tooltipText = `${colorName} - OFF`;
+        circleElement.setAttribute('data-tooltip', tooltipText);
+        circleElement.setAttribute('title', tooltipText);
     }
+    
+    console.log(`  Final state: JS=${colorSelectionState[color]}, DOM active=${circleElement.classList.contains('active')}, checkbox=${checkbox.checked}`);
+    
+    // Add animation
+    circleElement.style.animation = 'none';
+    circleElement.offsetHeight; // Trigger reflow
+    circleElement.style.animation = 'toggleBounce 0.3s ease';
 }
 
-// Handle individual color toggle
-function handleColorToggle() {
-    const allCheckbox = document.getElementById('colorAll');
-    const colorCheckboxes = document.querySelectorAll('#colorFilterContent input[type="checkbox"]:not(#colorAll)');
-    const checkedColors = Array.from(colorCheckboxes).filter(cb => cb.checked);
+function selectAllColors() {
+    console.log('SELECT ALL COLORS');
     
-    // Uncheck "All Colors" if any individual color is selected
-    if (checkedColors.length > 0) {
-        allCheckbox.checked = false;
-    } else {
-        // If no individual colors are selected, check "All Colors"
-        allCheckbox.checked = true;
-    }
+    // Update JavaScript state
+    Object.keys(colorSelectionState).forEach(color => {
+        colorSelectionState[color] = true;
+    });
+    
+    // Update DOM to match
+    const colorCircles = document.querySelectorAll('.color-circle');
+    colorCircles.forEach(circle => {
+        const checkbox = circle.querySelector('input[type="checkbox"]');
+        const color = circle.dataset.color;
+        const colorName = color.charAt(0).toUpperCase() + color.slice(1);
+        
+        // Activate all colors
+        circle.classList.add('active');
+        checkbox.checked = true;
+        const tooltipText = `${colorName} - ON`;
+        circle.setAttribute('data-tooltip', tooltipText);
+        circle.setAttribute('title', tooltipText);
+        
+        // Add animation with delay for visual effect
+        setTimeout(() => {
+            circle.style.animation = 'none';
+            circle.offsetHeight; // Trigger reflow
+            circle.style.animation = 'toggleBounce 0.3s ease';
+        }, Math.random() * 200); // Random delay up to 200ms
+    });
+    
+    console.log('JavaScript state after select all:', colorSelectionState);
 }
 
-// Update the dropdown button text
-function updateColorFilterText() {
-    const colorFilterText = document.getElementById('colorFilterText');
-    const allCheckbox = document.getElementById('colorAll');
-    const colorCheckboxes = document.querySelectorAll('#colorFilterContent input[type="checkbox"]:not(#colorAll)');
-    const checkedColors = Array.from(colorCheckboxes).filter(cb => cb.checked);
+function deselectAllColors() {
+    console.log('DESELECT ALL COLORS');
     
-    if (allCheckbox.checked || checkedColors.length === 0) {
-        colorFilterText.textContent = 'All Colors';
-    } else if (checkedColors.length === 1) {
-        colorFilterText.textContent = checkedColors[0].nextElementSibling.nextElementSibling.textContent;
-    } else {
-        colorFilterText.textContent = `${checkedColors.length} Colors Selected`;
-    }
+    // Update JavaScript state
+    Object.keys(colorSelectionState).forEach(color => {
+        colorSelectionState[color] = false;
+    });
+    
+    // Update DOM to match
+    const colorCircles = document.querySelectorAll('.color-circle');
+    colorCircles.forEach(circle => {
+        const checkbox = circle.querySelector('input[type="checkbox"]');
+        const color = circle.dataset.color;
+        const colorName = color.charAt(0).toUpperCase() + color.slice(1);
+        
+        // Deactivate all colors
+        circle.classList.remove('active');
+        checkbox.checked = false;
+        const tooltipText = `${colorName} - OFF`;
+        circle.setAttribute('data-tooltip', tooltipText);
+        circle.setAttribute('title', tooltipText);
+        
+        // Add animation with delay for visual effect
+        setTimeout(() => {
+            circle.style.animation = 'none';
+            circle.offsetHeight; // Trigger reflow
+            circle.style.animation = 'toggleBounce 0.3s ease';
+        }, Math.random() * 200); // Random delay up to 200ms
+    });
+    
+    console.log('JavaScript state after deselect all:', colorSelectionState);
 }
 
 // Get selected color filters
 function getSelectedColors() {
-    const allCheckbox = document.getElementById('colorAll');
-    const colorCheckboxes = document.querySelectorAll('#colorFilterContent input[type="checkbox"]:not(#colorAll)');
-    const checkedColors = Array.from(colorCheckboxes).filter(cb => cb.checked).map(cb => cb.value);
+    // Use JavaScript state instead of DOM checkboxes
+    const selectedColors = Object.entries(colorSelectionState)
+        .filter(([color, isSelected]) => isSelected)
+        .map(([color, isSelected]) => color);
     
-    if (allCheckbox.checked || checkedColors.length === 0) {
+    console.log('=== getSelectedColors ===');
+    console.log('JavaScript state:', colorSelectionState);
+    console.log('Selected colors from JS state:', selectedColors);
+    
+    if (selectedColors.length === 0) {
+        console.log('Returning all (no colors selected)');
         return ['all'];
     }
     
-    return checkedColors;
+    if (selectedColors.length === 5) {
+        console.log('Returning all (all colors selected)');
+        return ['all'];
+    }
+    
+    console.log('Returning specific colors:', selectedColors);
+    return selectedColors;
 }
 
 // Export filtered data to PDF
@@ -578,7 +758,10 @@ function filterDataByTimeAndColor(data, timeRange, dateFrom, dateTo, selectedCol
             if (endDate && highlightDate > endDate) return false;
             
             // Color filter
-            if (!selectedColors.includes('all') && !selectedColors.includes(highlight.color)) return false;
+            const passesColorFilter = selectedColors.includes('all') || selectedColors.includes(highlight.color);
+            console.log(`Highlight ${highlight.color} - Selected colors: [${selectedColors.join(', ')}] - Passes: ${passesColorFilter}`);
+            
+            if (!passesColorFilter) return false;
             
             return true;
         });
@@ -831,7 +1014,7 @@ function updateDomainList(sortedDomains) {
                             <div class="last-updated">Last updated: ${formatDate(lastHighlightTime)}</div>
                         </div>
                         <div class="domain-stats">
-                            <div class="highlight-count">
+                            <div class="highlight-count" data-domain="${domain}" style="cursor: pointer;">
                                 ${Object.entries(colorStats).map(([color, count]) => 
                                     count > 0 ? `<span class="color-indicator ${color}"></span><span>${count}</span>` : ''
                                 ).join('')}
@@ -857,9 +1040,10 @@ function generateSubpagesHTML(domain, subpages) {
             .filter(([color, count]) => count > 0)
             .map(([color, count]) => `<span class="color-indicator ${color}"></span><span>${count}</span>`)
             .join('');
+            
 
         return `
-            <div class="subpage-item">
+            <div class="subpage-item" data-url="${subpage.url}" style="cursor: pointer;">
                 <div class="subpage-info">
                     <div class="subpage-url" title="${subpage.url}">${subpage.title}</div>
                     <div class="subpage-actions">
@@ -872,7 +1056,7 @@ function generateSubpagesHTML(domain, subpages) {
                     </div>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-                    <div class="highlight-count">${colorCounts}</div>
+                    <div class="highlight-count" data-url="${subpage.url}" style="cursor: pointer;">${colorCounts}</div>
                     <div class="last-updated">Last: ${formatDate(subpage.lastHighlightTime)}</div>
                 </div>
                 <div class="highlight-list ${isExpanded ? 'expanded' : ''}" id="highlights-${btoa(subpage.url)}">
