@@ -175,6 +175,17 @@
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 }
 
+/* Mode style samples */
+.sample-text.mode-instant {
+    background-color: rgba(52, 152, 219, 0.4);
+    color: #2c3e50;
+}
+
+.sample-text.mode-doubleclick {
+    background-color: rgba(155, 89, 182, 0.4);
+    color: #2c3e50;
+}
+
 /* Preview section */
 .style-preview {
     margin: 8px 0;

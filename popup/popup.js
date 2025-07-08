@@ -7,7 +7,8 @@ console.log('Lumos Highlighter popup loaded');
 const defaultStyles = {
     cornerStyle: 'rectangular',
     backgroundStyle: 'transparent',
-    textStyle: 'default'
+    textStyle: 'default',
+    highlightMode: 'instant'
 };
 
 // Initialize popup when DOM is ready
@@ -16,6 +17,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setActiveButton('corner-style', 'rectangular');
     setActiveButton('background-style', 'transparent');
     setActiveButton('text-style', 'default');
+    setActiveButton('highlight-mode', 'instant');
     
     initializeStyleSettings();
     setupEventListeners();
@@ -30,6 +32,7 @@ function initializeStyleSettings() {
         setActiveButton('corner-style', styles.cornerStyle);
         setActiveButton('background-style', styles.backgroundStyle);
         setActiveButton('text-style', styles.textStyle);
+        setActiveButton('highlight-mode', styles.highlightMode || 'instant');
         
         // Update preview
         updatePreview();
@@ -118,7 +121,8 @@ function saveStyleSettings() {
     const styles = {
         cornerStyle: getActiveButtonValue('corner-style'),
         backgroundStyle: getActiveButtonValue('background-style'),
-        textStyle: getActiveButtonValue('text-style')
+        textStyle: getActiveButtonValue('text-style'),
+        highlightMode: getActiveButtonValue('highlight-mode')
     };
     
     chrome.storage.sync.set({ lumosHighlightStyles: styles }, function() {
