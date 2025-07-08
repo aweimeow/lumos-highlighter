@@ -68,8 +68,8 @@ function setupEventListeners() {
 function handleDomainListClick(event) {
     const target = event.target;
     
-    // Handle domain header clicks
-    if (target.closest('.domain-header')) {
+    // Handle domain header clicks - but not if clicking on buttons
+    if (target.closest('.domain-header') && !target.closest('button') && !target.closest('a')) {
         const domainHeader = target.closest('.domain-header');
         const domain = domainHeader.getAttribute('data-domain');
         if (domain) {
@@ -78,22 +78,13 @@ function handleDomainListClick(event) {
         return;
     }
     
-    // Handle subpage view button clicks
-    if (target.classList.contains('btn-view')) {
+    // Note: Highlight view buttons are now <a> tags, so no JavaScript handling needed
+    
+    // Handle subpage view button clicks (for show/hide highlights)
+    if (target.classList.contains('btn-view') && target.closest('.subpage-item')) {
         const url = target.getAttribute('data-url');
         if (url) {
             toggleSubpage(url);
-        }
-        return;
-    }
-    
-    // Handle highlight view button clicks
-    if (target.classList.contains('btn-view') && target.closest('.highlight-item')) {
-        const highlightId = target.getAttribute('data-highlight-id');
-        const highlightUrl = target.getAttribute('data-highlight-url');
-        const highlightText = target.getAttribute('data-highlight-text');
-        if (highlightId && highlightUrl && highlightText) {
-            viewHighlightInPage(highlightUrl, highlightText);
         }
         return;
     }
@@ -477,8 +468,8 @@ function getFilterInfo() {
     return filterInfo;
 }
 
-// View highlight in original page with text fragment
-async function viewHighlightInPage(url, highlightText) {
+// Generate Text Fragment URL for direct linking
+function generateTextFragmentURL(url, highlightText) {
     try {
         // Clean and prepare the text for the text fragment
         let cleanText = highlightText.trim();
@@ -515,46 +506,22 @@ async function viewHighlightInPage(url, highlightText) {
             .trim();
         
         // For text fragments, we need to handle special characters carefully
-        // Some characters need special encoding
         const textForFragment = cleanText
             .replace(/[%]/g, '%25')     // Encode % first
             .replace(/[#]/g, '%23')     // Encode #
             .replace(/[&]/g, '%26');    // Encode &
         
         // Create URL with text fragment to jump to the highlighted text
-        const textFragmentUrl = `${url}#:~:text=${encodeURIComponent(textForFragment)}`;
-        
-        console.log('Opening highlight in page:', {
-            originalText: highlightText,
-            processedText: cleanText,
-            url: textFragmentUrl
-        });
-        
-        // Send message to background script to open the tab
-        const response = await chrome.runtime.sendMessage({
-            action: 'openHighlightInPage',
-            url: textFragmentUrl
-        });
-        
-        if (!response || !response.success) {
-            throw new Error('Failed to open tab through background script');
-        }
+        return `${url}#:~:text=${encodeURIComponent(textForFragment)}`;
         
     } catch (error) {
-        console.error('Error opening highlight in page:', error);
-        
-        // Fallback: try to open without text fragment
-        try {
-            await chrome.runtime.sendMessage({
-                action: 'openHighlightInPage',
-                url: url
-            });
-        } catch (fallbackError) {
-            console.error('Fallback also failed:', fallbackError);
-            alert('Failed to open the page. Please try again.');
-        }
+        console.error('Error generating text fragment URL:', error);
+        // Fallback to original URL without text fragment
+        return url;
     }
 }
+
+// Note: viewHighlightInPage function removed - now using direct <a> href links
 
 // Apply all filters
 function applyFilters() {
@@ -931,7 +898,7 @@ function generateHighlightsHTML(highlights) {
             <div class="highlight-meta">
                 <span>${formatDate(highlight.timestamp)}</span>
                 <div class="highlight-actions">
-                    <button class="btn btn-view" data-highlight-id="${highlight.id}" data-highlight-url="${escapeHtml(highlight.url)}" data-highlight-text="${escapeHtml(highlight.text)}">View</button>
+                    <a href="${generateTextFragmentURL(highlight.url, highlight.text)}" target="_blank" class="btn btn-view">View</a>
                     <button class="btn btn-delete" data-highlight-id="${highlight.id}">Delete</button>
                 </div>
             </div>

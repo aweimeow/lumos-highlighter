@@ -108,14 +108,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             });
             return true; // Keep message channel open for async response
             
-        case 'openHighlightInPage':
-            openHighlightInPage(request.url).then(() => {
-                sendResponse({success: true});
-            }).catch(error => {
-                console.error('Error in openHighlightInPage:', error);
-                sendResponse({success: false, error: error.message});
-            });
-            return true; // Keep message channel open for async response
+        // Note: openHighlightInPage removed - now using direct <a> href links
             
         default:
             sendResponse({error: 'Unknown action'});
@@ -573,18 +566,4 @@ async function removeAllHighlightsFromPageStorage(domain, url) {
     }
 }
 
-// Open highlight in page with text fragment
-async function openHighlightInPage(url) {
-    try {
-        const tab = await chrome.tabs.create({
-            url: url,
-            active: true
-        });
-        
-        console.log('Opened highlight in page:', url, 'Tab ID:', tab.id);
-        
-    } catch (error) {
-        console.error('Error opening highlight in page:', error);
-        throw error;
-    }
-}
+// Note: openHighlightInPage function removed - now using direct <a> href links
