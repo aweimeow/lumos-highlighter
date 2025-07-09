@@ -1,33 +1,13 @@
 // Content script for Lumos Highlighter
 // Handles text selection, highlight rendering, and DOM interactions
 
-import { getPositionData, getTextIndex, mapNormalizedToOriginal } from './modules/positionDataGenerator.js';
-import { generateUUID } from './modules/domUtils.js';
-import { 
-    saveHighlight, 
-    deleteHighlight, 
-    restoreHighlights, 
-    addToPendingHighlights,
-    removeAllHighlightsFromCurrentPage,
-    disconnectDOMObserver,
-    getStorageStats
-} from './modules/storageManager.js';
-import { 
-    applyHighlight, 
-    changeHighlightColor, 
-    removeHighlight, 
-    restoreHighlight,
-    restoreHighlightByTextContent,
-    createSimpleHighlight,
-    updateHighlightStyles,
-    applyStylesToHighlight
-} from './modules/highlightManager.js';
-
 console.log('Lumos Highlighter content script loaded');
 
 let highlightToolbar = null;
 let currentSelection = null;
 let isShowingToolbar = false;
+let pendingHighlights = [];
+let domObserver = null;
 let lastClickTime = 0;
 let clickCount = 0;
 let isDoubleClickDragMode = false;
@@ -49,7 +29,7 @@ function init() {
     loadStyleSettings();
     
     // Load and restore highlights for this page
-    restoreHighlights(restoreHighlight);
+    restoreHighlights();
     
     // Set up SPA navigation detection
     setupSPANavigationDetection();
@@ -67,7 +47,7 @@ function setupSPANavigationDetection() {
             
             // Clear existing highlights and restore for new page
             setTimeout(() => {
-                restoreHighlights(restoreHighlight);
+                restoreHighlights();
             }, 1000);
         }
     };
@@ -341,7 +321,7 @@ function createHighlightToolbar() {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             const color = btn.dataset.color;
-            applyHighlight(color, currentSelection);
+            applyHighlight(color);
             hideHighlightToolbar();
         });
     });
@@ -430,7 +410,161 @@ function hideHighlightToolbar() {
     currentSelection = null;
 }
 
+// Apply highlight to selected text
+function applyHighlight(color) {
+    if (!currentSelection || !currentSelection.range) return;
+    
+    const range = currentSelection.range;
+    const text = currentSelection.text;
+    
+    // Create highlight data
+    const highlightData = {
+        id: generateUUID(),
+        timestamp: new Date().toISOString(),
+        url: window.location.href,
+        page_title: document.title,
+        color: color,
+        text: text,
+        context_before: getContextBefore(range) || getBackupContext('before', range),
+        context_after: getContextAfter(range) || getBackupContext('after', range),
+        position: getPositionData(range)
+    };
+    
+    // Debug: Log the highlight data to check context
+    console.log('Highlight data being saved:', {
+        text: highlightData.text,
+        context_before: highlightData.context_before,
+        context_after: highlightData.context_after,
+        domain: new URL(window.location.href).hostname
+    });
+    
+    // Apply highlight to DOM
+    const highlightElement = document.createElement('span');
+    highlightElement.className = `lumos-highlight lumos-highlight-${color}`;
+    highlightElement.setAttribute('data-highlight-id', highlightData.id);
+    highlightElement.setAttribute('data-highlight-color', color);
+    
+    // Apply current styles
+    applyStylesToHighlight(highlightElement);
+    
+    try {
+        // Validate range before highlighting
+        if (range.collapsed) {
+            console.warn('Cannot highlight collapsed range');
+            return;
+        }
+        
+        // Additional validation
+        const selectedText = range.toString().trim();
+        if (selectedText.length === 0) {
+            console.warn('Cannot highlight empty selection');
+            return;
+        }
+        
+        // Debug logging
+        console.log('Attempting to highlight:', {
+            text: selectedText,
+            startContainer: range.startContainer.nodeName,
+            endContainer: range.endContainer.nodeName,
+            startOffset: range.startOffset,
+            endOffset: range.endOffset
+        });
+        
+        // Use a more robust highlighting method
+        if (!highlightRangeRobustly(range, highlightElement)) {
+            console.warn('Cannot highlight this selection');
+            return;
+        }
+        
+        console.log('Highlight successfully applied');
+        
+        // Clear selection first to ensure UI responds properly
+        window.getSelection().removeAllRanges();
+        
+        // Save highlight to storage (async, shouldn't block UI)
+        try {
+            saveHighlight(highlightData);
+        } catch (error) {
+            console.log('Could not save highlight to storage, but highlight applied to DOM:', error);
+        }
+        
+    } catch (error) {
+        console.error('Error applying highlight:', error);
+        // Clean up any partially created elements
+        if (highlightElement.parentNode) {
+            highlightElement.parentNode.removeChild(highlightElement);
+        }
+        return;
+    }
+}
 
+// Change highlight color
+function changeHighlightColor(highlightElement, newColor) {
+    const highlightId = highlightElement.getAttribute('data-highlight-id');
+    const oldColor = highlightElement.getAttribute('data-highlight-color');
+    
+    if (oldColor === newColor) {
+        return; // No change needed
+    }
+    
+    // Find all parts of this highlight (in case it spans multiple elements)
+    const allParts = document.querySelectorAll(`[data-highlight-id="${highlightId}"]`);
+    
+    // Update all parts of the highlight
+    allParts.forEach(part => {
+        part.className = `lumos-highlight lumos-highlight-${newColor}`;
+        part.setAttribute('data-highlight-color', newColor);
+        
+        // Apply current styles
+        applyStylesToHighlight(part);
+    });
+    
+    // Update storage (async, non-blocking)
+    setTimeout(() => {
+        try {
+            const domain = new URL(window.location.href).hostname;
+            chrome.runtime.sendMessage({
+                action: 'updateHighlightColor',
+                domain: domain,
+                highlightId: highlightId,
+                newColor: newColor
+            }, (response) => {
+                if (chrome.runtime.lastError) {
+                    console.log('Extension context invalidated, cannot update color in storage:', chrome.runtime.lastError.message);
+                    // Keep DOM changes since they're visible to user
+                }
+            });
+        } catch (error) {
+            console.log('Extension context invalidated, cannot update color in storage:', error);
+            // Keep DOM changes since they're visible to user
+        }
+    }, 0);
+}
+
+// Remove highlight from DOM and storage
+function removeHighlight(highlightElement) {
+    const highlightId = highlightElement.getAttribute('data-highlight-id');
+    
+    // Find all parts of this highlight (in case it spans multiple elements)
+    const allParts = document.querySelectorAll(`[data-highlight-id="${highlightId}"]`);
+    
+    // Remove all parts from DOM
+    allParts.forEach(part => {
+        const parent = part.parentNode;
+        if (parent) {
+            while (part.firstChild) {
+                parent.insertBefore(part.firstChild, part);
+            }
+            parent.removeChild(part);
+            
+            // Normalize text nodes for each parent
+            parent.normalize();
+        }
+    });
+    
+    // Remove from storage
+    deleteHighlight(highlightId);
+}
 
 // Get context before selection using multiple robust strategies
 function getContextBefore(range) {
@@ -1013,16 +1147,362 @@ function getBackupContext(direction, range) {
     return '';
 }
 
+// Get position data for highlight (enhanced for dynamic content)
+function getPositionData(range) {
+    const startContainer = range.startContainer;
+    const endContainer = range.endContainer;
+    
+    return {
+        // Traditional offset-based positioning
+        startOffset: range.startOffset,
+        endOffset: range.endOffset,
+        
+        // XPath-based positioning (more robust for dynamic content)
+        startXPath: getXPath(startContainer),
+        endXPath: getXPath(endContainer),
+        
+        // CSS selector-based positioning (fallback)
+        startSelector: getCSSSelector(startContainer.nodeType === Node.TEXT_NODE ? startContainer.parentElement : startContainer),
+        endSelector: getCSSSelector(endContainer.nodeType === Node.TEXT_NODE ? endContainer.parentElement : endContainer),
+        
+        // Text-based positioning (for verification)
+        startTextIndex: getTextIndex(startContainer, range.startOffset),
+        endTextIndex: getTextIndex(endContainer, range.endOffset),
+        
+        // DOM structure fingerprint
+        domFingerprint: createDOMFingerprint(range.commonAncestorContainer),
+        
+        // Additional context for verification
+        surroundingText: {
+            before: range.startContainer.textContent?.substring(Math.max(0, range.startOffset - 50), range.startOffset) || '',
+            after: range.endContainer.textContent?.substring(range.endOffset, range.endOffset + 50) || ''
+        }
+    };
+}
 
+// Generate XPath for element
+function getXPath(element) {
+    if (element.nodeType === Node.TEXT_NODE) {
+        element = element.parentNode;
+    }
+    
+    if (element.id) {
+        return `//*[@id="${element.id}"]`;
+    }
+    
+    const parts = [];
+    while (element && element.nodeType === Node.ELEMENT_NODE) {
+        let index = 0;
+        let sibling = element.previousSibling;
+        
+        while (sibling) {
+            if (sibling.nodeType === Node.ELEMENT_NODE && sibling.nodeName === element.nodeName) {
+                index++;
+            }
+            sibling = sibling.previousSibling;
+        }
+        
+        const tagName = element.nodeName.toLowerCase();
+        const part = index > 0 ? `${tagName}[${index + 1}]` : tagName;
+        parts.unshift(part);
+        
+        element = element.parentNode;
+    }
+    
+    return parts.length ? '/' + parts.join('/') : '';
+}
 
+// Generate CSS selector for element
+function getCSSSelector(element) {
+    if (!element || element.nodeType !== Node.ELEMENT_NODE) {
+        return '';
+    }
+    
+    try {
+        // Use ID if available and valid
+        if (element.id && isValidCSSIdentifier(element.id)) {
+            return `#${element.id}`;
+        }
+        
+        // Build selector path
+        const path = [];
+        let current = element;
+        let depth = 0;
+        const maxDepth = 10; // Limit selector depth
+        
+        while (current && current.nodeType === Node.ELEMENT_NODE && current !== document.body && depth < maxDepth) {
+            let selector = current.tagName.toLowerCase();
+            
+            // Add class if available and valid
+            if (current.className && typeof current.className === 'string') {
+                const classes = current.className.split(/\s+/)
+                    .filter(c => c && !c.startsWith('lumos-') && isValidCSSIdentifier(c))
+                    .slice(0, 2); // Limit to 2 classes
+                
+                if (classes.length > 0) {
+                    selector += '.' + classes.join('.');
+                }
+            }
+            
+            // Add nth-child if needed for uniqueness (but limit complexity)
+            if (current.parentElement && depth < 3) {
+                const siblings = Array.from(current.parentElement.children).filter(el => el.tagName === current.tagName);
+                if (siblings.length > 1 && siblings.length < 20) { // Don't use nth-child for very large lists
+                    const index = siblings.indexOf(current) + 1;
+                    selector += `:nth-child(${index})`;
+                }
+            }
+            
+            path.unshift(selector);
+            current = current.parentElement;
+            depth++;
+        }
+        
+        const fullSelector = path.join(' > ');
+        
+        // Validate the selector before returning
+        try {
+            document.querySelector(fullSelector);
+            return fullSelector;
+        } catch (error) {
+            // Silent warning for invalid selectors - common with dynamic content
+            console.log('Generated invalid CSS selector, trying fallback:', fullSelector.length > 50 ? 'too long' : fullSelector);
+            
+            // Fallback: Try a simpler selector with just tag names
+            const simplePath = [];
+            let fallbackCurrent = element;
+            let fallbackDepth = 0;
+            
+            while (fallbackCurrent && fallbackCurrent.nodeType === Node.ELEMENT_NODE && 
+                   fallbackCurrent !== document.body && fallbackDepth < 5) {
+                simplePath.unshift(fallbackCurrent.tagName.toLowerCase());
+                fallbackCurrent = fallbackCurrent.parentElement;
+                fallbackDepth++;
+            }
+            
+            const simpleSelector = simplePath.join(' > ');
+            
+            try {
+                document.querySelector(simpleSelector);
+                console.log('Using fallback selector:', simpleSelector);
+                return simpleSelector;
+            } catch (fallbackError) {
+                // Silent fail - this is expected for complex dynamic pages
+                return ''; // Return empty string for invalid selectors
+            }
+        }
+        
+    } catch (error) {
+        console.error('Error generating CSS selector:', error);
+        return '';
+    }
+}
 
+// Check if a string is a valid CSS identifier
+function isValidCSSIdentifier(str) {
+    if (!str || typeof str !== 'string') return false;
+    
+    // CSS identifier can contain letters, digits, hyphens, underscores
+    // Must not start with a digit or two hyphens
+    // Must not contain special characters that would break selectors
+    const validPattern = /^[a-zA-Z_][\w-]*$/;
+    const invalidChars = /[+(){}[\]="'<>.,!@#$%^&*|\\/?]/;
+    
+    // Additional check for problematic characters commonly found in generated class names
+    const hasEquals = str.includes('=');
+    const hasPlus = str.includes('+');
+    const hasSpecialChars = /[^a-zA-Z0-9_-]/.test(str);
+    
+    if (hasEquals || hasPlus || hasSpecialChars) {
+        // Silent fail for invalid CSS identifiers - this is common with generated class names
+        return false;
+    }
+    
+    return validPattern.test(str) && !invalidChars.test(str) && !str.startsWith('--');
+}
 
+// Get text index within a larger context
+function getTextIndex(container, offset) {
+    if (container.nodeType === Node.TEXT_NODE) {
+        // Find the text node's position within its parent's text content
+        let textIndex = 0;
+        let currentNode = container.parentNode.firstChild;
+        
+        while (currentNode && currentNode !== container) {
+            if (currentNode.nodeType === Node.TEXT_NODE) {
+                textIndex += currentNode.textContent.length;
+            }
+            currentNode = currentNode.nextSibling;
+        }
+        
+        return textIndex + offset;
+    }
+    
+    return offset;
+}
 
+// Create DOM structure fingerprint
+function createDOMFingerprint(element) {
+    if (!element) return '';
+    
+    const fingerprint = [];
+    let current = element;
+    
+    // Go up the DOM tree to create a structural fingerprint
+    for (let i = 0; i < 5 && current && current !== document.body; i++) {
+        const tagName = current.tagName ? current.tagName.toLowerCase() : 'text';
+        const className = current.className && typeof current.className === 'string' ? 
+            current.className.split(/\s+/).filter(c => c && !c.startsWith('lumos-')).slice(0, 2).join('.') : '';
+        
+        fingerprint.unshift(`${tagName}${className ? '.' + className : ''}`);
+        current = current.parentElement;
+    }
+    
+    return fingerprint.join(' > ');
+}
 
+// Generate UUID
+function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
 
+// Save highlight to storage (async, non-blocking)
+function saveHighlight(highlightData) {
+    // Use setTimeout to make this completely async and non-blocking
+    setTimeout(() => {
+        try {
+            const domain = new URL(window.location.href).hostname;
+            
+            chrome.runtime.sendMessage({
+                action: 'saveHighlight',
+                domain: domain,
+                highlight: highlightData
+            }, (response) => {
+                if (chrome.runtime.lastError) {
+                    console.log('Extension context invalidated, highlight saved locally:', chrome.runtime.lastError.message);
+                    // Could implement local storage fallback here if needed
+                }
+            });
+        } catch (error) {
+            console.log('Extension context invalidated, cannot save highlight:', error);
+        }
+    }, 0);
+}
 
+// Delete highlight from storage (async, non-blocking)
+function deleteHighlight(highlightId) {
+    // Use setTimeout to make this completely async and non-blocking
+    setTimeout(() => {
+        try {
+            const domain = new URL(window.location.href).hostname;
+            
+            chrome.runtime.sendMessage({
+                action: 'deleteHighlight',
+                domain: domain,
+                highlightId: highlightId
+            }, (response) => {
+                if (chrome.runtime.lastError) {
+                    console.log('Extension context invalidated, cannot delete highlight:', chrome.runtime.lastError.message);
+                }
+            });
+        } catch (error) {
+            console.log('Extension context invalidated, cannot delete highlight:', error);
+        }
+    }, 0);
+}
+
+// Restore highlights on page load
+function restoreHighlights() {
+    const domain = new URL(window.location.href).hostname;
+    
+    try {
+        chrome.runtime.sendMessage({
+            action: 'getHighlights',
+            domain: domain,
+            url: window.location.href
+        }, (response) => {
+            if (chrome.runtime.lastError) {
+                console.log('Extension context invalidated, cannot restore highlights:', chrome.runtime.lastError.message);
+                return;
+            }
+            
+            if (response && response.highlights) {
+                console.log('Restoring', response.highlights.length, 'highlights for URL:', window.location.href);
+                response.highlights.forEach(highlight => {
+                    console.log('Restoring highlight:', highlight.text, 'with context:', {
+                        before: highlight.context_before ? highlight.context_before.substring(0, 50) + '...' : 'none',
+                        after: highlight.context_after ? highlight.context_after.substring(0, 50) + '...' : 'none'
+                    });
+                    restoreHighlight(highlight);
+                });
+                
+                // Set up DOM observer for dynamic content
+                setupDOMObserver();
+                
+                // Retry pending highlights multiple times for dynamic content
+                scheduleRetryAttempts();
+            }
+        });
+    } catch (error) {
+        console.log('Extension context invalidated, cannot restore highlights:', error);
+    }
+}
 
 // Restore individual highlight using a robust text-based approach
+function restoreHighlight(highlightData) {
+    console.log('🔄 Attempting to restore highlight:', {
+        text: highlightData.text.substring(0, 50) + '...',
+        textLength: highlightData.text.length,
+        color: highlightData.color,
+        id: highlightData.id,
+        context_before: highlightData.context_before ? highlightData.context_before.substring(0, 30) + '...' : 'none',
+        context_after: highlightData.context_after ? highlightData.context_after.substring(0, 30) + '...' : 'none',
+        url: highlightData.url
+    });
+    
+    // Skip if already highlighted
+    if (document.querySelector(`[data-highlight-id="${highlightData.id}"]`)) {
+        console.log('✅ Highlight already exists, skipping');
+        return;
+    }
+    
+    // Log current page context for debugging
+    console.log('📄 Current page context:', {
+        url: window.location.href,
+        title: document.title,
+        bodyTextLength: document.body.textContent.length,
+        firstTextNodes: getAllTextNodes().slice(0, 3).map(node => node.textContent.substring(0, 50) + '...')
+    });
+    
+    // Use a simple but robust text-based approach
+    const success = restoreHighlightByTextContent(highlightData);
+    
+    if (success) {
+        console.log('✅ Successfully restored highlight:', highlightData.text.substring(0, 30) + '...');
+        return;
+    }
+    
+    console.log('❌ Could not restore highlight:', {
+        text: highlightData.text,
+        textLength: highlightData.text.length,
+        possibleReasons: [
+            'Text may have been modified on the page',
+            'Text may be dynamically loaded',
+            'Text may be split across multiple elements',
+            'Text formatting may have changed'
+        ]
+    });
+    
+    // Add to pending highlights for retry
+    if (!pendingHighlights.find(h => h.id === highlightData.id)) {
+        pendingHighlights.push(highlightData);
+        console.log('➕ Added to pending highlights queue, total pending:', pendingHighlights.length);
+    }
+}
 
 // Find text matches using multiple strategies
 function findTextMatches(nodeText, targetText, node) {
@@ -1381,6 +1861,40 @@ function levenshteinDistance(str1, str2) {
     return matrix[str2.length][str1.length];
 }
 
+// Map normalized text position back to original text position
+function mapNormalizedToOriginal(originalText, normalizedText, normalizedPosition) {
+    if (normalizedPosition === 0) return 0;
+    
+    let originalIndex = 0;
+    let normalizedIndex = 0;
+    
+    while (originalIndex < originalText.length && normalizedIndex < normalizedPosition) {
+        const originalChar = originalText[originalIndex];
+        
+        // Check if this character would be kept in normalization
+        const normalizedChar = originalChar.toLowerCase();
+        const isKept = /[\w\s\u4e00-\u9fff\u3400-\u4dbf\u20000-\u2a6df\u2a700-\u2b73f\u2b740-\u2b81f\u2b820-\u2ceaf]/.test(normalizedChar);
+        
+        if (isKept) {
+            // If it's whitespace, it might be normalized to a single space
+            if (/\s/.test(normalizedChar)) {
+                // Skip consecutive whitespace in original
+                while (originalIndex < originalText.length && /\s/.test(originalText[originalIndex])) {
+                    originalIndex++;
+                }
+                normalizedIndex++;
+            } else {
+                originalIndex++;
+                normalizedIndex++;
+            }
+        } else {
+            // Character was removed in normalization, skip it
+            originalIndex++;
+        }
+    }
+    
+    return normalizedIndex === normalizedPosition ? originalIndex : -1;
+}
 
 // Find partial matches for text that might be fragmented or corrupted
 function findPartialMatches(targetText) {
@@ -2504,10 +3018,168 @@ function createHighlightElement(node, index, text, highlightData) {
     }
 }
 
+// Schedule retry attempts for dynamic content
+function scheduleRetryAttempts() {
+    // Multiple retry intervals to handle different types of dynamic content
+    const retryIntervals = [500, 1000, 2000, 3000, 5000, 8000, 12000];
+    
+    retryIntervals.forEach((interval, index) => {
+        setTimeout(() => {
+            if (pendingHighlights.length > 0) {
+                console.log(`Retry attempt ${index + 1}/${retryIntervals.length} after ${interval}ms`);
+                retryPendingHighlights();
+                
+                // Additional check for common dynamic content indicators
+                if (index === retryIntervals.length - 1 && pendingHighlights.length > 0) {
+                    console.log('Final retry attempt - checking for lazy-loaded content');
+                    waitForLazyContent().then(() => {
+                        setTimeout(() => retryPendingHighlights(), 1000);
+                    });
+                }
+            }
+        }, interval);
+    });
+}
 
+// Wait for lazy-loaded content
+async function waitForLazyContent() {
+    return new Promise((resolve) => {
+        // Check for common lazy loading indicators
+        const checkForContent = () => {
+            const commonSelectors = [
+                '[data-lazy-loaded]',
+                '[data-testid]',
+                '.loaded',
+                '[aria-live]',
+                '[data-react-element]'
+            ];
+            
+            for (const selector of commonSelectors) {
+                if (document.querySelector(selector)) {
+                    console.log('Detected potential dynamic content:', selector);
+                    break;
+                }
+            }
+            
+            resolve();
+        };
+        
+        // Use Intersection Observer to detect when content is loaded
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    setTimeout(checkForContent, 500);
+                    observer.disconnect();
+                }
+            });
+        });
+        
+        // Observe the main content area
+        const mainContent = document.querySelector('main, #main, .main, [role="main"]') || document.body;
+        observer.observe(mainContent);
+        
+        // Fallback timeout
+        setTimeout(() => {
+            observer.disconnect();
+            resolve();
+        }, 3000);
+    });
+}
 
+// Set up DOM observer for dynamic content
+function setupDOMObserver() {
+    if (domObserver) return; // Already set up
+    
+    domObserver = new MutationObserver((mutations) => {
+        let shouldRetry = false;
+        let significantChange = false;
+        
+        mutations.forEach(mutation => {
+            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                // Check if added nodes contain text content
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === Node.TEXT_NODE || 
+                        (node.nodeType === Node.ELEMENT_NODE && node.textContent.trim())) {
+                        shouldRetry = true;
+                        
+                        // Check for significant content additions
+                        if (node.nodeType === Node.ELEMENT_NODE && node.textContent.length > 100) {
+                            significantChange = true;
+                        }
+                    }
+                });
+            }
+        });
+        
+        if (shouldRetry && pendingHighlights.length > 0) {
+            // Debounce the retry to avoid too many attempts
+            clearTimeout(window.retryTimeout);
+            
+            // Use shorter timeout for significant changes
+            const timeout = significantChange ? 100 : 200;
+            
+            window.retryTimeout = setTimeout(() => {
+                console.log('DOM change detected, retrying highlight restoration');
+                retryPendingHighlights();
+            }, timeout);
+        }
+    });
+    
+    domObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true // Also watch for text changes
+    });
+}
 
+// Retry restoring pending highlights
+function retryPendingHighlights() {
+    if (pendingHighlights.length === 0) return;
+    
+    console.log('Retrying', pendingHighlights.length, 'pending highlights');
+    const stillPending = [];
+    
+    pendingHighlights.forEach(highlightData => {
+        // Add retry count if not exists
+        if (!highlightData.retryCount) {
+            highlightData.retryCount = 0;
+        }
+        
+        highlightData.retryCount++;
+        
+        // Give up after too many retries
+        if (highlightData.retryCount > 10) {
+            console.warn('Giving up on highlight after 10 retries:', highlightData.text.substring(0, 50));
+            return;
+        }
+        
+        const wasRestored = attemptRestoreHighlight(highlightData);
+        if (!wasRestored) {
+            stillPending.push(highlightData);
+        }
+    });
+    
+    pendingHighlights = stillPending;
+    console.log('Still pending:', pendingHighlights.length, 'highlights');
+}
 
+// Attempt to restore a highlight without adding to pending list
+function attemptRestoreHighlight(highlightData) {
+    // Skip if already highlighted
+    if (document.querySelector(`[data-highlight-id="${highlightData.id}"]`)) {
+        return true;
+    }
+    
+    // Use the new robust text-based approach
+    const success = restoreHighlightByTextContent(highlightData);
+    
+    if (success) {
+        console.log('Successfully restored pending highlight:', highlightData.text.substring(0, 30) + '...');
+        return true;
+    }
+    
+    return false;
+}
 
 // Listen for messages from background script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -2531,16 +3203,55 @@ function handleRemoveAllHighlightsConfirmation() {
     const confirmMessage = `Are you sure you want to remove all ${count} highlight${count > 1 ? 's' : ''} from this page?\n\nThis action cannot be undone.`;
     
     if (confirm(confirmMessage)) {
-        removeAllHighlightsFromCurrentPage((highlightId) => {
-            // Use the storage manager's deleteHighlight function
-            deleteHighlight(highlightId);
-        });
-        
-        // Hide any open toolbar
-        hideHighlightToolbar();
+        removeAllHighlightsFromCurrentPage();
     }
 }
 
+// Remove all highlights from current page (DOM and storage)
+function removeAllHighlightsFromCurrentPage() {
+    const highlightElements = document.querySelectorAll('.lumos-highlight');
+    const count = highlightElements.length;
+    
+    if (count === 0) {
+        return;
+    }
+    
+    // Remove from DOM
+    highlightElements.forEach(element => {
+        const parent = element.parentNode;
+        if (parent) {
+            // Move the text content back to parent and remove the highlight element
+            parent.insertBefore(document.createTextNode(element.textContent), element);
+            parent.removeChild(element);
+            
+            // Normalize the parent node to merge adjacent text nodes
+            parent.normalize();
+        }
+    });
+    
+    // Remove from storage via background script (async, non-blocking)
+    setTimeout(() => {
+        try {
+            const domain = new URL(window.location.href).hostname;
+            chrome.runtime.sendMessage({
+                action: 'removeAllHighlightsFromPage',
+                domain: domain,
+                url: window.location.href
+            }, (response) => {
+                if (chrome.runtime.lastError) {
+                    console.log('Extension context invalidated, cannot remove from storage:', chrome.runtime.lastError.message);
+                } else {
+                    console.log('Successfully removed all highlights from page');
+                }
+            });
+        } catch (error) {
+            console.log('Extension context invalidated, cannot remove from storage:', error);
+        }
+    }, 0);
+    
+    // Hide any open toolbar
+    hideHighlightToolbar();
+}
 
 // Load style settings from storage
 function loadStyleSettings() {
@@ -2560,7 +3271,36 @@ function loadStyleSettings() {
     }
 }
 
+// Update highlight styles when settings change
+function updateHighlightStyles(newStyles) {
+    currentStyles = newStyles;
+    console.log('Updated highlight styles:', currentStyles);
+    
+    // Update all existing highlights with new styles
+    const existingHighlights = document.querySelectorAll('.lumos-highlight');
+    existingHighlights.forEach(highlight => {
+        applyStylesToHighlight(highlight);
+    });
+}
 
+// Simplified highlighting method for safe ranges
+function highlightRangeRobustly(range, highlightElement) {
+    try {
+        // Since we've filtered out cross-element selections, this should be simpler
+        if (range.startContainer === range.endContainer && 
+            range.startContainer.nodeType === Node.TEXT_NODE) {
+            range.surroundContents(highlightElement);
+            return true;
+        }
+        
+        // For any remaining complex cases, try the complex handler
+        return highlightComplexRange(range, highlightElement);
+        
+    } catch (error) {
+        console.error('Highlighting failed:', error);
+        return false;
+    }
+}
 
 // Handle complex ranges that span multiple elements
 function highlightComplexRange(range, highlightElement) {
@@ -2804,6 +3544,30 @@ function isTextNodeInRange(textNode, range) {
     }
 }
 
+// Apply styles to a highlight element
+function applyStylesToHighlight(element) {
+    // Remove existing style classes
+    element.classList.remove('corner-rounded', 'bg-underline', 'bg-crayon', 'text-bold', 'text-shadow');
+    
+    // Apply corner style
+    if (currentStyles.cornerStyle === 'rounded') {
+        element.classList.add('corner-rounded');
+    }
+    
+    // Apply background style
+    if (currentStyles.backgroundStyle === 'underline') {
+        element.classList.add('bg-underline');
+    } else if (currentStyles.backgroundStyle === 'crayon') {
+        element.classList.add('bg-crayon');
+    }
+    
+    // Apply text style
+    if (currentStyles.textStyle === 'bold') {
+        element.classList.add('text-bold');
+    } else if (currentStyles.textStyle === 'shadow') {
+        element.classList.add('text-shadow');
+    }
+}
 
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
