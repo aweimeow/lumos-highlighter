@@ -1,6 +1,6 @@
 # Privacy Policy for Lumos Highlighter
 
-*Last updated: July 5, 2025*
+*Last updated: July 10, 2025*
 
 ## Overview
 
@@ -56,6 +56,16 @@ Our extension requests the following permissions:
 - All data processing occurs locally on your device
 - No network requests are made to external servers
 - No personal information is collected beyond the text you choose to highlight
+- The extension includes comprehensive automated testing to ensure code quality and security
+
+## Development & Testing
+
+This extension is developed with security and privacy in mind:
+
+- **Open Source**: All code is publicly available for review
+- **Automated Testing**: 53+ tests ensure functionality works as intended
+- **No External Dependencies**: Core functionality uses only local Chrome APIs
+- **Modular Architecture**: Code is organized for transparency and maintainability
 
 ## Children's Privacy
 

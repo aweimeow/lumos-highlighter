@@ -63,19 +63,20 @@ Lumos Highlighter is a Chrome Extension that enables users to highlight text acr
 - `exportToPDF(timeRange, options)` - Direct export from grouped structure
 - `updateMetadata()` - Maintain stats and date ranges
 
-### 2. Content Script (`content.js`)
+### 2. Content Script (`content.js`) - Modular Architecture
 **Responsibilities:**
-- Detect text selection events
-- Render highlight toolbar
-- Apply/remove highlights in DOM
-- Restore highlights on page load
+- Orchestrate module initialization
+- Coordinate inter-module communication
+- Handle background script messages
+- Maintain global state
 
-**Key Functions:**
-- `onTextSelection()`
-- `showHighlightToolbar(selection, position)`
-- `applyHighlight(range, color)`
-- `removeHighlight(highlightId)`
-- `restoreHighlights()`
+**Key Modules:**
+- **EventHandler**: Text selection and user interaction events
+- **ToolbarManager**: Highlight toolbar rendering and positioning
+- **HighlightManager**: Core highlighting logic and DOM manipulation
+- **TextMatcher**: Advanced text matching and similarity algorithms
+- **StorageManager**: Local storage operations and data persistence
+- **StyleManager**: Dynamic style management and customization
 
 ### 3. Highlight Manager (`highlightManager.js`)
 **Responsibilities:**
@@ -226,28 +227,47 @@ Lumos Highlighter is a Chrome Extension that enables users to highlight text acr
 ```
 lumos-highlighter/
 ├── manifest.json
+├── package.json                    # Development dependencies and scripts
+├── Makefile                        # Build and test commands
 ├── background/
-│   ├── background.js
-│   ├── storageManager.js
-│   └── pdfExporter.js
+│   └── background.js
 ├── content/
-│   ├── content.js
-│   ├── highlightManager.js
-│   └── highlightToolbar.js
+│   ├── content.js                  # Main entry point (orchestration)
+│   └── modules/                    # Modular architecture
+│       ├── constants.js            # Content-specific constants
+│       ├── contextExtractor.js     # Extract text context
+│       ├── domUtils.js             # DOM manipulation utilities
+│       ├── dynamicContentHandler.js # Handle dynamic content
+│       ├── eventHandler.js         # Event management
+│       ├── highlightManager.js     # Core highlighting logic
+│       ├── positionDataGenerator.js # Position calculations
+│       ├── storageManager.js       # Storage operations
+│       ├── styleManager.js         # Style management
+│       ├── textMatcher.js          # Text matching algorithms
+│       ├── textSelectionValidator.js # Validate selections
+│       └── toolbarManager.js       # Toolbar management
+├── shared/                         # Shared utilities
+│   ├── constants.js                # Global constants
+│   ├── messaging.js                # Message passing
+│   ├── storage.js                  # Storage abstractions
+│   └── utils.js                    # Common utilities
 ├── popup/
 │   ├── popup.html
 │   ├── popup.js
 │   └── popup.css
 ├── options/
 │   ├── options.html
-│   ├── options.js
-│   └── options.css
+│   ├── management.html             # Highlight management
+│   ├── export-selection.html       # Export interface
+│   ├── pdf-export.html             # PDF export
+│   └── *.js files
+├── tests/                          # Comprehensive test suite
+│   ├── setup.js                    # Test environment setup
+│   ├── core-functions.test.js      # Core algorithm tests
+│   ├── dom-utils.test.js           # DOM utility tests
+│   └── text-matcher.test.js        # Text matching tests
 ├── styles/
-│   ├── content.css
-│   └── highlights.css
-├── lib/
-│   ├── jspdf.min.js
-│   └── utils.js
+│   └── content.css
 └── assets/
     ├── icons/
     └── images/
@@ -289,13 +309,42 @@ websiteData.forEach(site => {
 - No external API calls
 - Optional data encryption
 
-## Questions for Clarification
+## Testing & Quality Assurance
 
-1. **Context Length**: How much context text should be captured before/after highlights?
-2. **Storage Limits**: Should we implement automatic cleanup based on age or count?
-3. **Export Format**: Any specific PDF formatting requirements (fonts, layout, etc.)?
-4. **Color Customization**: Should users be able to customize the five colors?
-5. **Conflict Resolution**: How to handle overlapping highlights?
-6. **Performance**: Any specific performance requirements for large numbers of highlights?
+### Test Suite Architecture
+- **Jest Framework**: Modern testing with jsdom environment
+- **Chrome API Mocking**: Comprehensive Chrome extension API simulation
+- **53+ Tests**: Covering core algorithms and functionality
+- **Modular Testing**: Each module tested independently
 
-This design provides a solid foundation for the Lumos Highlighter extension. Please review and let me know if you'd like me to elaborate on any section or if you have questions about the implementation approach.
+### Test Categories
+1. **Core Functions**: Text processing, utility functions, algorithm validation
+2. **DOM Utilities**: UUID generation, element detection, content extraction
+3. **Text Matching**: Exact/fuzzy matching, multilingual support, similarity algorithms
+
+### Development Workflow
+```bash
+make test           # Run all tests
+make test-watch     # Development mode with file watching
+make test-coverage  # Generate detailed coverage reports
+make build          # Prepare production build
+make package        # Create distributable package
+```
+
+## Current Implementation Status
+
+### ✅ Completed Features
+- **Modular Architecture**: Clean separation of concerns across 12+ modules
+- **Advanced Text Matching**: Levenshtein distance, fuzzy matching, multilingual support
+- **Robust Testing**: Comprehensive test coverage with automated quality checks
+- **Modern Development**: Jest testing, Make-based build system
+- **DOM Utilities**: Smart content detection, position calculation
+- **Storage Management**: Efficient local storage with data persistence
+
+### 🚧 Areas for Enhancement
+- **PDF Export Optimization**: Enhanced formatting and export options
+- **Performance Monitoring**: Metrics collection for large datasets
+- **Cross-Site Synchronization**: Improved data consistency across tabs
+- **Advanced Filtering**: Enhanced search and organization features
+
+This design reflects the current modular, well-tested implementation of Lumos Highlighter, providing a solid foundation for future enhancements and maintenance.

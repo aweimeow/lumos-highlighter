@@ -30,11 +30,21 @@ Lumos Highlighter is a Chrome extension that makes it easy to highlight importan
 1. **Download the Extension**
    - Clone or download this repository to your computer
 
-2. **Open Chrome Extensions**
+2. **Install Dependencies** (for development)
+   ```bash
+   npm install
+   ```
+
+3. **Run Tests** (optional)
+   ```bash
+   make test
+   ```
+
+4. **Open Chrome Extensions**
    - Go to `chrome://extensions/` in your browser
    - Turn on "Developer mode" (top-right toggle)
 
-3. **Load the Extension**
+5. **Load the Extension**
    - Click "Load unpacked"
    - Select the `lumos-highlighter` folder
    - The extension will appear in your toolbar
@@ -85,11 +95,42 @@ If Lumos Highlighter makes your web browsing more productive, consider buying th
 
 This project is open source and available under the MIT License.
 
+## 🛠️ Development
+
+This extension uses a modular architecture for better maintainability:
+
+### Architecture
+- **Modular Design**: Code split into focused modules (event handling, text matching, DOM utilities)
+- **Comprehensive Testing**: 53+ tests covering core algorithms and functionality
+- **Modern Tooling**: Jest testing framework, Make-based build system
+
+### Development Commands
+```bash
+make test           # Run all tests
+make test-watch     # Run tests in watch mode  
+make test-coverage  # Generate coverage report
+make build          # Prepare for production
+make package        # Create extension package
+```
+
+### File Structure
+```
+lumos-highlighter/
+├── content/modules/     # Modular content script components
+├── shared/             # Shared utilities and constants
+├── background/         # Service worker
+├── popup/             # Extension popup UI
+├── options/           # Settings and management pages
+├── tests/             # Comprehensive test suite
+└── styles/            # CSS styling
+```
+
 ## 🤝 Contributing
 
 We welcome contributions! Feel free to:
 - Report bugs or suggest features by creating an issue
 - Submit pull requests with improvements
+- Run tests with `make test` before submitting
 - Share the extension with others who might find it useful
 
 ---
