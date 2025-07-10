@@ -1,10 +1,8 @@
 // Text Matching Utilities Module
 // Extracted from content.js - Core text matching, similarity calculation, and fuzzy matching utilities
 
-import { TEXT_MATCHING } from './constants.js';
-
 // Main text matching function using multiple strategies
-export function findTextMatches(nodeText, targetText, node) {
+function findTextMatches(nodeText, targetText, node) {
     const matches = [];
     
     // Strategy 1: Exact match
@@ -57,22 +55,26 @@ export function findTextMatches(nodeText, targetText, node) {
 }
 
 // Normalize text by removing extra whitespace
-export function normalizeText(text) {
+
+function normalizeText(text) {
     return text.replace(/\s+/g, ' ').replace(/\n/g, ' ').replace(/\t/g, ' ').trim();
 }
 
 // Normalize text for matching (language-agnostic)
-export function normalizeTextForMatching(text) {
+
+function normalizeTextForMatching(text) {
+    const removeChars = window.LumosContentConstants?.TEXT_MATCHING?.REMOVE_CHARS || /[^\w\s\u4e00-\u9fff\u3400-\u4dbf\u20000-\u2a6df\u2a700-\u2b73f\u2b740-\u2b81f\u2b820-\u2ceaf]/g;
     return text.toLowerCase()
         .replace(/\s+/g, ' ')
         .replace(/\n/g, ' ')
         .replace(/\t/g, ' ')
-        .replace(TEXT_MATCHING.REMOVE_CHARS, '')
+        .replace(removeChars, '')
         .trim();
 }
 
 // Find the original index in unnormalized text
-export function findOriginalIndex(originalText, normalizedText, normalizedIndex) {
+
+function findOriginalIndex(originalText, normalizedText, normalizedIndex) {
     let originalIndex = 0;
     let normalizedPos = 0;
     
@@ -93,7 +95,8 @@ export function findOriginalIndex(originalText, normalizedText, normalizedIndex)
 }
 
 // Map normalized text position back to original text position
-export function mapNormalizedToOriginal(originalText, normalizedText, normalizedPosition) {
+
+function mapNormalizedToOriginal(originalText, normalizedText, normalizedPosition) {
     if (normalizedPosition === 0) return 0;
     
     let originalIndex = 0;
@@ -102,7 +105,8 @@ export function mapNormalizedToOriginal(originalText, normalizedText, normalized
     while (originalIndex < originalText.length && normalizedIndex < normalizedPosition) {
         const originalChar = originalText[originalIndex];
         const normalizedChar = originalChar.toLowerCase();
-        const isKept = TEXT_MATCHING.KEEP_CHARS.test(normalizedChar);
+        const keepChars = window.LumosContentConstants?.TEXT_MATCHING?.KEEP_CHARS || /[\w\s\u4e00-\u9fff\u3400-\u4dbf\u20000-\u2a6df\u2a700-\u2b73f\u2b740-\u2b81f\u2b820-\u2ceaf]/g;
+        const isKept = keepChars.test(normalizedChar);
         
         if (isKept) {
             if (/\s/.test(normalizedChar)) {
@@ -123,7 +127,8 @@ export function mapNormalizedToOriginal(originalText, normalizedText, normalized
 }
 
 // Find fuzzy matches using word-based comparison
-export function findFuzzyMatches(nodeText, targetText) {
+
+function findFuzzyMatches(nodeText, targetText) {
     const matches = [];
     const targetWords = targetText.split(/\s+/).filter(word => word.trim().length > 0);
     const nodeWords = nodeText.split(/\s+/).filter(word => word.trim().length > 0);
@@ -164,7 +169,8 @@ export function findFuzzyMatches(nodeText, targetText) {
 }
 
 // Calculate word-level similarity
-export function calculateWordSimilarity(word1, word2) {
+
+function calculateWordSimilarity(word1, word2) {
     if (word1 === word2) return 1.0;
     
     const normalized1 = word1.toLowerCase().replace(/[^\w]/g, '');
@@ -181,7 +187,8 @@ export function calculateWordSimilarity(word1, word2) {
 }
 
 // Calculate similarity between two word arrays
-export function calculateWordArraySimilarity(words1, words2) {
+
+function calculateWordArraySimilarity(words1, words2) {
     if (words1.length !== words2.length) return 0;
     
     let matches = 0;
@@ -198,7 +205,8 @@ export function calculateWordArraySimilarity(words1, words2) {
 }
 
 // Calculate Levenshtein distance between two strings
-export function levenshteinDistance(str1, str2) {
+
+function levenshteinDistance(str1, str2) {
     if (str1 === str2) return 0;
     
     const matrix = [];
@@ -229,7 +237,8 @@ export function levenshteinDistance(str1, str2) {
 }
 
 // Calculate text similarity using multiple metrics
-export function calculateTextSimilarity(text1, text2) {
+
+function calculateTextSimilarity(text1, text2) {
     if (text1 === text2) return 1.0;
     
     const normalize = (text) => text.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
@@ -259,7 +268,8 @@ export function calculateTextSimilarity(text1, text2) {
 }
 
 // Simple pattern matching for text
-export function findPatternMatches(targetText, pattern, minScore = 0.6) {
+
+function findPatternMatches(targetText, pattern, minScore = 0.6) {
     const matches = [];
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
     
@@ -284,3 +294,20 @@ export function findPatternMatches(targetText, pattern, minScore = 0.6) {
     
     return matches.sort((a, b) => b.similarity - a.similarity).slice(0, 5);
 }
+
+// Assign all functions to global window object
+window.LumosTextMatcher = {
+    findTextMatches,
+    normalizeTextForMatching,
+    findOriginalIndex,
+    mapNormalizedToOriginal,
+    normalizeText,
+    findFuzzyMatches,
+    calculateWordSimilarity,
+    calculateWordArraySimilarity,
+    levenshteinDistance,
+    calculateTextSimilarity,
+    findPatternMatches,
+    // Reference to shared utility function
+    calculateSimilarity: (str1, str2) => window.LumosUtils.calculateSimilarity(str1, str2)
+};

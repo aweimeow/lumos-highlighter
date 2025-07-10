@@ -1,17 +1,16 @@
 // Shared storage interface for Lumos Highlighter
 // This module provides a standardized way to interact with Chrome storage
 
-import { STORAGE_KEYS } from './constants.js';
-
 /**
  * Storage interface for managing highlights and settings
  */
-export class StorageInterface {
+class StorageInterface {
     /**
      * Get highlights data from storage
      * @returns {Promise<Object>} Highlights data
      */
     static async getHighlightsData() {
+        const STORAGE_KEYS = window.LumosSharedConstants.STORAGE_KEYS;
         return new Promise((resolve) => {
             chrome.storage.local.get([STORAGE_KEYS.HIGHLIGHTS], (result) => {
                 resolve(result[STORAGE_KEYS.HIGHLIGHTS] || {
@@ -33,6 +32,7 @@ export class StorageInterface {
      * @returns {Promise<void>}
      */
     static async saveHighlightsData(data) {
+        const STORAGE_KEYS = window.LumosSharedConstants.STORAGE_KEYS;
         return new Promise((resolve) => {
             chrome.storage.local.set({
                 [STORAGE_KEYS.HIGHLIGHTS]: data
@@ -45,6 +45,7 @@ export class StorageInterface {
      * @returns {Promise<Object>} Settings object
      */
     static async getSettings() {
+        const STORAGE_KEYS = window.LumosSharedConstants.STORAGE_KEYS;
         return new Promise((resolve) => {
             chrome.storage.local.get([STORAGE_KEYS.SETTINGS], (result) => {
                 resolve(result[STORAGE_KEYS.SETTINGS] || {});
@@ -58,6 +59,7 @@ export class StorageInterface {
      * @returns {Promise<void>}
      */
     static async saveSettings(settings) {
+        const STORAGE_KEYS = window.LumosSharedConstants.STORAGE_KEYS;
         return new Promise((resolve) => {
             chrome.storage.local.set({
                 [STORAGE_KEYS.SETTINGS]: settings
@@ -161,7 +163,16 @@ export class StorageInterface {
 }
 
 // Legacy function wrappers for backward compatibility
-export const getHighlightsData = () => StorageInterface.getHighlightsData();
-export const saveHighlightsData = (data) => StorageInterface.saveHighlightsData(data);
-export const getSettings = () => StorageInterface.getSettings();
-export const saveSettings = (settings) => StorageInterface.saveSettings(settings);
+const getHighlightsData = () => StorageInterface.getHighlightsData();
+const saveHighlightsData = (data) => StorageInterface.saveHighlightsData(data);
+const getSettings = () => StorageInterface.getSettings();
+const saveSettings = (settings) => StorageInterface.saveSettings(settings);
+
+// Assign to global window object
+window.LumosStorageInterface = {
+    StorageInterface,
+    getHighlightsData,
+    saveHighlightsData,
+    getSettings,
+    saveSettings
+};

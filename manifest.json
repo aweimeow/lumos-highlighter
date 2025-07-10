@@ -15,7 +15,25 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content/content.js"],
+      "js": [
+        "shared/constants.js",
+        "shared/storage.js",
+        "shared/utils.js",
+        "shared/messaging.js",
+        "content/modules/constants.js",
+        "content/modules/domUtils.js",
+        "content/modules/textMatcher.js",
+        "content/modules/contextExtractor.js",
+        "content/modules/positionDataGenerator.js",
+        "content/modules/storageManager.js",
+        "content/modules/dynamicContentHandler.js",
+        "content/modules/styleManager.js",
+        "content/modules/toolbarManager.js",
+        "content/modules/eventHandler.js",
+        "content/modules/textSelectionValidator.js",
+        "content/modules/highlightManager.js",
+        "content/content.js"
+      ],
       "css": ["styles/content.css"]
     }
   ],

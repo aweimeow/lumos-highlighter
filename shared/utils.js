@@ -1,12 +1,10 @@
 // Shared utility functions for Lumos Highlighter
 // This module contains common utility functions used across different modules
 
-import { COLOR_NAMES } from './constants.js';
-
 /**
  * Utility functions for common operations
  */
-export class Utils {
+class Utils {
     /**
      * Generate a unique ID for highlights
      * @returns {string} Unique ID
@@ -58,6 +56,7 @@ export class Utils {
      * @returns {string} Color name
      */
     static getColorName(hexColor) {
+        const COLOR_NAMES = window.LumosSharedConstants.COLOR_NAMES;
         return COLOR_NAMES[hexColor] || 'unknown';
     }
 
@@ -273,22 +272,45 @@ export class Utils {
 }
 
 // Legacy function exports for backward compatibility
-export const generateId = () => Utils.generateId();
-export const getCurrentTimestamp = () => Utils.getCurrentTimestamp();
-export const formatDate = (timestamp) => Utils.formatDate(timestamp);
-export const extractDomain = (url) => Utils.extractDomain(url);
-export const getColorName = (hexColor) => Utils.getColorName(hexColor);
-export const cleanText = (text) => Utils.cleanText(text);
-export const escapeHtml = (text) => Utils.escapeHtml(text);
-export const truncateText = (text, length, suffix) => Utils.truncateText(text, length, suffix);
-export const debounce = (func, delay) => Utils.debounce(func, delay);
-export const throttle = (func, delay) => Utils.throttle(func, delay);
-export const wait = (ms) => Utils.wait(ms);
-export const retry = (func, maxRetries, initialDelay, backoffMultiplier) => 
+const generateId = () => Utils.generateId();
+const getCurrentTimestamp = () => Utils.getCurrentTimestamp();
+const formatDate = (timestamp) => Utils.formatDate(timestamp);
+const extractDomain = (url) => Utils.extractDomain(url);
+const getColorName = (hexColor) => Utils.getColorName(hexColor);
+const cleanText = (text) => Utils.cleanText(text);
+const escapeHtml = (text) => Utils.escapeHtml(text);
+const truncateText = (text, length, suffix) => Utils.truncateText(text, length, suffix);
+const debounce = (func, delay) => Utils.debounce(func, delay);
+const throttle = (func, delay) => Utils.throttle(func, delay);
+const wait = (ms) => Utils.wait(ms);
+const retry = (func, maxRetries, initialDelay, backoffMultiplier) => 
     Utils.retry(func, maxRetries, initialDelay, backoffMultiplier);
-export const isValidUrl = (string) => Utils.isValidUrl(string);
-export const deepClone = (obj) => Utils.deepClone(obj);
-export const calculateSimilarity = (str1, str2) => Utils.calculateSimilarity(str1, str2);
-export const isElementVisible = (element) => Utils.isElementVisible(element);
-export const getElementPosition = (element) => Utils.getElementPosition(element);
-export const waitForDOMReady = () => Utils.waitForDOMReady();
+const isValidUrl = (string) => Utils.isValidUrl(string);
+const deepClone = (obj) => Utils.deepClone(obj);
+const calculateSimilarity = (str1, str2) => Utils.calculateSimilarity(str1, str2);
+const isElementVisible = (element) => Utils.isElementVisible(element);
+const getElementPosition = (element) => Utils.getElementPosition(element);
+const waitForDOMReady = () => Utils.waitForDOMReady();
+
+// Assign to global window object
+window.LumosUtils = {
+    Utils,
+    generateId,
+    getCurrentTimestamp,
+    formatDate,
+    extractDomain,
+    getColorName,
+    cleanText,
+    escapeHtml,
+    truncateText,
+    debounce,
+    throttle,
+    wait,
+    retry,
+    isValidUrl,
+    deepClone,
+    calculateSimilarity,
+    isElementVisible,
+    getElementPosition,
+    waitForDOMReady
+};

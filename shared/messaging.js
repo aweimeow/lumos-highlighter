@@ -1,12 +1,10 @@
 // Shared messaging system for Lumos Highlighter
 // This module provides a standardized way for inter-script communication
 
-import { MESSAGE_TYPES } from './constants.js';
-
 /**
  * Messaging system for communication between different scripts
  */
-export class MessagingSystem {
+class MessagingSystem {
     /**
      * Send a message to background script
      * @param {string} type - Message type
@@ -88,7 +86,7 @@ export class MessagingSystem {
 /**
  * Specialized messaging functions for common operations
  */
-export class HighlightMessaging {
+class HighlightMessaging {
     /**
      * Save a highlight
      * @param {string} domain - Domain name
@@ -96,6 +94,7 @@ export class HighlightMessaging {
      * @returns {Promise<Object>} Response
      */
     static async saveHighlight(domain, highlightData) {
+        const MESSAGE_TYPES = window.LumosSharedConstants.MESSAGE_TYPES;
         return MessagingSystem.sendToBackground(MESSAGE_TYPES.SAVE_HIGHLIGHT, {
             domain,
             highlightData
@@ -109,6 +108,7 @@ export class HighlightMessaging {
      * @returns {Promise<Object>} Response
      */
     static async deleteHighlight(domain, highlightId) {
+        const MESSAGE_TYPES = window.LumosSharedConstants.MESSAGE_TYPES;
         return MessagingSystem.sendToBackground(MESSAGE_TYPES.DELETE_HIGHLIGHT, {
             domain,
             highlightId
@@ -123,6 +123,7 @@ export class HighlightMessaging {
      * @returns {Promise<Object>} Response
      */
     static async updateHighlightColor(domain, highlightId, newColor) {
+        const MESSAGE_TYPES = window.LumosSharedConstants.MESSAGE_TYPES;
         return MessagingSystem.sendToBackground(MESSAGE_TYPES.UPDATE_HIGHLIGHT_COLOR, {
             domain,
             highlightId,
@@ -137,6 +138,7 @@ export class HighlightMessaging {
      * @returns {Promise<Object>} Response
      */
     static async getHighlights(domain, url) {
+        const MESSAGE_TYPES = window.LumosSharedConstants.MESSAGE_TYPES;
         return MessagingSystem.sendToBackground(MESSAGE_TYPES.GET_HIGHLIGHTS, {
             domain,
             url
@@ -149,6 +151,7 @@ export class HighlightMessaging {
      * @returns {Promise<Object>} Response
      */
     static async getAllHighlights(domain) {
+        const MESSAGE_TYPES = window.LumosSharedConstants.MESSAGE_TYPES;
         return MessagingSystem.sendToBackground(MESSAGE_TYPES.GET_ALL_HIGHLIGHTS, {
             domain
         });
@@ -159,6 +162,7 @@ export class HighlightMessaging {
      * @returns {Promise<Object>} Response
      */
     static async getAllWebsites() {
+        const MESSAGE_TYPES = window.LumosSharedConstants.MESSAGE_TYPES;
         return MessagingSystem.sendToBackground(MESSAGE_TYPES.GET_ALL_WEBSITES);
     }
 
@@ -167,6 +171,7 @@ export class HighlightMessaging {
      * @returns {Promise<Object>} Response
      */
     static async getMetadata() {
+        const MESSAGE_TYPES = window.LumosSharedConstants.MESSAGE_TYPES;
         return MessagingSystem.sendToBackground(MESSAGE_TYPES.GET_METADATA);
     }
 
@@ -177,6 +182,7 @@ export class HighlightMessaging {
      * @returns {Promise<Object>} Response
      */
     static async removeAllHighlightsFromPage(domain, url) {
+        const MESSAGE_TYPES = window.LumosSharedConstants.MESSAGE_TYPES;
         return MessagingSystem.sendToBackground(MESSAGE_TYPES.REMOVE_ALL_HIGHLIGHTS_FROM_PAGE, {
             domain,
             url
@@ -187,13 +193,14 @@ export class HighlightMessaging {
 /**
  * Specialized messaging functions for export operations
  */
-export class ExportMessaging {
+class ExportMessaging {
     /**
      * Export page summary
      * @param {Object} tab - Tab object
      * @returns {Promise<Object>} Response
      */
     static async exportPageSummary(tab) {
+        const MESSAGE_TYPES = window.LumosSharedConstants.MESSAGE_TYPES;
         return MessagingSystem.sendToBackground(MESSAGE_TYPES.EXPORT_PAGE_SUMMARY, { tab });
     }
 
@@ -202,6 +209,7 @@ export class ExportMessaging {
      * @returns {Promise<Object>} Response
      */
     static async exportAllSitesSummary() {
+        const MESSAGE_TYPES = window.LumosSharedConstants.MESSAGE_TYPES;
         return MessagingSystem.sendToBackground(MESSAGE_TYPES.EXPORT_ALL_SITES_SUMMARY);
     }
 
@@ -210,6 +218,7 @@ export class ExportMessaging {
      * @returns {Promise<Object>} Response
      */
     static async getExportSelectionData() {
+        const MESSAGE_TYPES = window.LumosSharedConstants.MESSAGE_TYPES;
         return MessagingSystem.sendToBackground(MESSAGE_TYPES.GET_EXPORT_SELECTION_DATA);
     }
 
@@ -220,6 +229,7 @@ export class ExportMessaging {
      * @returns {Promise<Object>} Response
      */
     static async generatePDF(data, type) {
+        const MESSAGE_TYPES = window.LumosSharedConstants.MESSAGE_TYPES;
         return MessagingSystem.sendToBackground(MESSAGE_TYPES.GENERATE_PDF, { data, type });
     }
 }
@@ -227,12 +237,13 @@ export class ExportMessaging {
 /**
  * Specialized messaging functions for management operations
  */
-export class ManagementMessaging {
+class ManagementMessaging {
     /**
      * Open management interface
      * @returns {Promise<Object>} Response
      */
     static async openManagementInterface() {
+        const MESSAGE_TYPES = window.LumosSharedConstants.MESSAGE_TYPES;
         return MessagingSystem.sendToBackground(MESSAGE_TYPES.OPEN_MANAGEMENT_INTERFACE);
     }
 }
@@ -240,7 +251,7 @@ export class ManagementMessaging {
 /**
  * Event emitter for internal communication within scripts
  */
-export class EventEmitter {
+class EventEmitter {
     constructor() {
         this.events = {};
     }
@@ -299,11 +310,26 @@ export class EventEmitter {
 }
 
 // Global event emitter instance
-export const globalEventEmitter = new EventEmitter();
+const globalEventEmitter = new EventEmitter();
 
 // Legacy function exports for backward compatibility
-export const sendToBackground = (type, data) => MessagingSystem.sendToBackground(type, data);
-export const sendToContentScript = (tabId, type, data) => MessagingSystem.sendToContentScript(tabId, type, data);
-export const addMessageListener = (handler) => MessagingSystem.addMessageListener(handler);
-export const removeMessageListener = (handler) => MessagingSystem.removeMessageListener(handler);
-export const createResponse = (success, data, error) => MessagingSystem.createResponse(success, data, error);
+const sendToBackground = (type, data) => MessagingSystem.sendToBackground(type, data);
+const sendToContentScript = (tabId, type, data) => MessagingSystem.sendToContentScript(tabId, type, data);
+const addMessageListener = (handler) => MessagingSystem.addMessageListener(handler);
+const removeMessageListener = (handler) => MessagingSystem.removeMessageListener(handler);
+const createResponse = (success, data, error) => MessagingSystem.createResponse(success, data, error);
+
+// Assign to global window object
+window.LumosMessaging = {
+    MessagingSystem,
+    HighlightMessaging,
+    ExportMessaging,
+    ManagementMessaging,
+    EventEmitter,
+    globalEventEmitter,
+    sendToBackground,
+    sendToContentScript,
+    addMessageListener,
+    removeMessageListener,
+    createResponse
+};

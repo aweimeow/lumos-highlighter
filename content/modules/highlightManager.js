@@ -1,26 +1,10 @@
 // Highlight Manager Module
 // Extracted from content.js - Core highlight creation, modification, and removal functionality
 
-import { getPositionData } from './positionDataGenerator.js';
-import { generateUUID } from './domUtils.js';
-import { saveHighlight, deleteHighlight } from './storageManager.js';
-import { 
-    findTextMatches, 
-    calculateTextSimilarity, 
-    normalizeTextForMatching,
-    findPatternMatches 
-} from './textMatcher.js';
-
-// Global variables for highlight management
-let currentStyles = {
-    cornerStyle: 'rectangular',
-    backgroundStyle: 'transparent',
-    textStyle: 'default',
-    highlightMode: 'instant'
-};
+// Re-export style functions for backward compatibility
 
 // Apply highlight to selected text
-export function applyHighlight(color, selection) {
+function applyHighlight(color, selection) {
     if (!selection || !selection.range) return;
     
     const range = selection.range;
@@ -28,15 +12,15 @@ export function applyHighlight(color, selection) {
     
     // Create highlight data
     const highlightData = {
-        id: generateUUID(),
+        id: window.LumosDomUtils.generateUUID(),
         timestamp: new Date().toISOString(),
         url: window.location.href,
         page_title: document.title,
         color: color,
         text: text,
-        context_before: getContextBefore(range) || getBackupContext('before', range),
-        context_after: getContextAfter(range) || getBackupContext('after', range),
-        position: getPositionData(range)
+        context_before: window.LumosContextExtractor.getContextBefore(range) || getBackupContext('before', range),
+        context_after: window.LumosContextExtractor.getContextAfter(range) || getBackupContext('after', range),
+        position: window.LumosPositionDataGenerator.getPositionData(range)
     };
     
     console.log('Highlight data being saved:', {
@@ -53,7 +37,7 @@ export function applyHighlight(color, selection) {
     highlightElement.setAttribute('data-highlight-color', color);
     
     // Apply current styles
-    applyStylesToHighlight(highlightElement);
+    window.LumosStyleManager.applyStylesToHighlight(highlightElement);
     
     try {
         // Validate range before highlighting
@@ -90,7 +74,7 @@ export function applyHighlight(color, selection) {
         
         // Save highlight to storage (async, shouldn't block UI)
         try {
-            saveHighlight(highlightData);
+            window.LumosStorageManager.saveHighlight(highlightData);
         } catch (error) {
             console.log('Could not save highlight to storage, but highlight applied to DOM:', error);
         }
@@ -106,7 +90,7 @@ export function applyHighlight(color, selection) {
 }
 
 // Change highlight color
-export function changeHighlightColor(highlightElement, newColor) {
+function changeHighlightColor(highlightElement, newColor) {
     const highlightId = highlightElement.getAttribute('data-highlight-id');
     const oldColor = highlightElement.getAttribute('data-highlight-color');
     
@@ -123,7 +107,7 @@ export function changeHighlightColor(highlightElement, newColor) {
         part.setAttribute('data-highlight-color', newColor);
         
         // Apply current styles
-        applyStylesToHighlight(part);
+        window.LumosStyleManager.applyStylesToHighlight(part);
     });
     
     // Update storage (async, non-blocking)
@@ -147,7 +131,7 @@ export function changeHighlightColor(highlightElement, newColor) {
 }
 
 // Remove highlight from DOM and storage
-export function removeHighlight(highlightElement) {
+function removeHighlight(highlightElement) {
     const highlightId = highlightElement.getAttribute('data-highlight-id');
     
     // Find all parts of this highlight (in case it spans multiple elements)
@@ -168,11 +152,11 @@ export function removeHighlight(highlightElement) {
     });
     
     // Remove from storage
-    deleteHighlight(highlightId);
+    window.LumosStorageManager.deleteHighlight(highlightId);
 }
 
 // Restore individual highlight using a robust text-based approach
-export function restoreHighlight(highlightData, addToPending = true) {
+function restoreHighlight(highlightData, addToPending = true) {
     console.log('🔄 Attempting to restore highlight:', {
         text: highlightData.text.substring(0, 50) + '...',
         textLength: highlightData.text.length,
@@ -201,7 +185,7 @@ export function restoreHighlight(highlightData, addToPending = true) {
 }
 
 // Restore highlight using text content matching
-export function restoreHighlightByTextContent(highlightData) {
+function restoreHighlightByTextContent(highlightData) {
     const { text, context_before, context_after } = highlightData;
     
     try {
@@ -238,7 +222,7 @@ export function restoreHighlightByTextContent(highlightData) {
             const nodeText = node.textContent;
             
             // Try multiple matching strategies
-            candidates.push(...findTextMatches(nodeText, text, node));
+            candidates.push(...window.LumosTextMatcher.findTextMatches(nodeText, text, node));
         }
         
         if (candidates.length === 0) {
@@ -278,7 +262,7 @@ export function restoreHighlightByTextContent(highlightData) {
 }
 
 // Create a simple highlight without complex DOM manipulation
-export function createSimpleHighlight(textNode, startIndex, text, highlightData) {
+function createSimpleHighlight(textNode, startIndex, text, highlightData) {
     try {
         const nodeText = textNode.textContent;
         
@@ -287,7 +271,7 @@ export function createSimpleHighlight(textNode, startIndex, text, highlightData)
         let rangeText = nodeText.substring(startIndex, startIndex + actualLength);
         
         // Try to find the best match by extending or reducing the range
-        const normalizedTarget = normalizeTextForMatching(text);
+        const normalizedTarget = window.LumosTextMatcher.normalizeTextForMatching(text);
         let bestMatch = null;
         let bestScore = 0;
         
@@ -297,9 +281,9 @@ export function createSimpleHighlight(textNode, startIndex, text, highlightData)
             if (startIndex + testLength > nodeText.length || testLength < 5) continue;
             
             const testText = nodeText.substring(startIndex, startIndex + testLength);
-            const normalizedTest = normalizeTextForMatching(testText);
+            const normalizedTest = window.LumosTextMatcher.normalizeTextForMatching(testText);
             
-            const similarity = calculateTextSimilarity(normalizedTest, normalizedTarget);
+            const similarity = window.LumosTextMatcher.calculateTextSimilarity(normalizedTest, normalizedTarget);
             
             if (similarity > bestScore && similarity > 0.8) {
                 bestScore = similarity;
@@ -325,8 +309,8 @@ export function createSimpleHighlight(textNode, startIndex, text, highlightData)
             rangeText = nodeText.substring(startIndex, startIndex + actualLength);
             
             // Check if it's close enough
-            const normalizedRange = normalizeTextForMatching(rangeText);
-            const similarity = calculateTextSimilarity(normalizedRange, normalizedTarget);
+            const normalizedRange = window.LumosTextMatcher.normalizeTextForMatching(rangeText);
+            const similarity = window.LumosTextMatcher.calculateTextSimilarity(normalizedRange, normalizedTarget);
             
             if (similarity < 0.7) {
                 console.warn('Text similarity too low:', {
@@ -353,7 +337,7 @@ export function createSimpleHighlight(textNode, startIndex, text, highlightData)
         highlightElement.setAttribute('data-highlight-color', highlightData.color);
         
         // Apply current styles
-        applyStylesToHighlight(highlightElement);
+        window.LumosStyleManager.applyStylesToHighlight(highlightElement);
         
         range.surroundContents(highlightElement);
         
@@ -366,44 +350,9 @@ export function createSimpleHighlight(textNode, startIndex, text, highlightData)
     }
 }
 
-// Apply styles to a highlight element
-export function applyStylesToHighlight(element) {
-    // Remove existing style classes
-    element.classList.remove('corner-rounded', 'bg-underline', 'bg-crayon', 'text-bold', 'text-shadow');
-    
-    // Apply corner style
-    if (currentStyles.cornerStyle === 'rounded') {
-        element.classList.add('corner-rounded');
-    }
-    
-    // Apply background style
-    if (currentStyles.backgroundStyle === 'underline') {
-        element.classList.add('bg-underline');
-    } else if (currentStyles.backgroundStyle === 'crayon') {
-        element.classList.add('bg-crayon');
-    }
-    
-    // Apply text style
-    if (currentStyles.textStyle === 'bold') {
-        element.classList.add('text-bold');
-    } else if (currentStyles.textStyle === 'shadow') {
-        element.classList.add('text-shadow');
-    }
-}
-
-// Update highlight styles
-export function updateHighlightStyles(newStyles) {
-    currentStyles = { ...currentStyles, ...newStyles };
-    
-    // Update all existing highlights
-    const highlights = document.querySelectorAll('.lumos-highlight');
-    highlights.forEach(highlight => {
-        applyStylesToHighlight(highlight);
-    });
-}
 
 // Simplified highlighting method for safe ranges
-export function highlightRangeRobustly(range, highlightElement) {
+function highlightRangeRobustly(range, highlightElement) {
     try {
         // Since we've filtered out cross-element selections, this should be simpler
         if (range.startContainer === range.endContainer && 
@@ -425,7 +374,7 @@ export function highlightRangeRobustly(range, highlightElement) {
 function highlightComplexRange(range, highlightElement) {
     try {
         // Get all text nodes within the range
-        const textNodes = getTextNodesInRange(range);
+        const textNodes = window.LumosDomUtils.getTextNodesInRange(range);
         
         if (textNodes.length === 0) {
             console.warn('No text nodes found in range');
@@ -482,7 +431,7 @@ function highlightComplexRange(range, highlightElement) {
             nodeHighlightElement.setAttribute('data-highlight-part', i.toString());
             
             // Apply styles
-            applyStylesToHighlight(nodeHighlightElement);
+            window.LumosStyleManager.applyStylesToHighlight(nodeHighlightElement);
             
             try {
                 nodeRange.surroundContents(nodeHighlightElement);
@@ -500,7 +449,7 @@ function highlightComplexRange(range, highlightElement) {
 }
 
 // Helper function to get text nodes within a range
-function getTextNodesInRange(range) {
+function getTextNodesInRangeForHighlighting(range) {
     const textNodes = [];
     const walker = document.createTreeWalker(
         range.commonAncestorContainer,
@@ -549,12 +498,12 @@ function scoreTextCandidate(candidate, targetText, contextBefore, contextAfter) 
         
         // Score based on context matching
         if (contextBefore && extendedBefore) {
-            const beforeMatch = calculateContextMatch(extendedBefore, contextBefore);
+            const beforeMatch = calculateContextMatchForHighlighting(extendedBefore, contextBefore);
             score += beforeMatch * 10; // Weight context matching heavily
         }
         
         if (contextAfter && extendedAfter) {
-            const afterMatch = calculateContextMatch(extendedAfter, contextAfter);
+            const afterMatch = calculateContextMatchForHighlighting(extendedAfter, contextAfter);
             score += afterMatch * 10;
         }
         
@@ -567,7 +516,7 @@ function scoreTextCandidate(candidate, targetText, contextBefore, contextAfter) 
 }
 
 // Calculate how well two context strings match
-function calculateContextMatch(actual, expected) {
+function calculateContextMatchForHighlighting(actual, expected) {
     if (!actual || !expected) return 0;
     
     const actualLower = actual.toLowerCase().trim();
@@ -645,42 +594,6 @@ function getNextTextNode(node) {
     return current;
 }
 
-// Context extraction functions (simplified versions)
-function getContextBefore(range) {
-    try {
-        const startContainer = range.startContainer;
-        const startOffset = range.startOffset;
-        
-        if (startContainer.nodeType === Node.TEXT_NODE) {
-            const textBefore = startContainer.textContent.substring(0, startOffset);
-            const words = textBefore.split(/\s+/).filter(word => word.trim().length > 0);
-            return words.slice(-30).join(' ').trim();
-        }
-        
-        return '';
-    } catch (error) {
-        console.error('Error getting context before:', error);
-        return '';
-    }
-}
-
-function getContextAfter(range) {
-    try {
-        const endContainer = range.endContainer;
-        const endOffset = range.endOffset;
-        
-        if (endContainer.nodeType === Node.TEXT_NODE) {
-            const textAfter = endContainer.textContent.substring(endOffset);
-            const words = textAfter.split(/\s+/).filter(word => word.trim().length > 0);
-            return words.slice(0, 30).join(' ').trim();
-        }
-        
-        return '';
-    } catch (error) {
-        console.error('Error getting context after:', error);
-        return '';
-    }
-}
 
 // Backup context extraction
 function getBackupContext(direction, range) {
@@ -707,3 +620,23 @@ function getBackupContext(direction, range) {
     
     return '';
 }
+
+// Assign to global window object
+window.LumosHighlightManager = {
+    updateHighlightStyles: (styles) => window.LumosStyleManager.updateHighlightStyles(styles),
+    applyHighlight,
+    changeHighlightColor,
+    removeHighlight,
+    restoreHighlight,
+    restoreHighlightByTextContent,
+    createSimpleHighlight,
+    highlightRangeRobustly,
+    highlightComplexRange,
+    getTextNodesInRangeForHighlighting,
+    scoreTextCandidate,
+    calculateContextMatchForHighlighting,
+    getExtendedContext,
+    getPreviousTextNode,
+    getNextTextNode,
+    getBackupContext
+};

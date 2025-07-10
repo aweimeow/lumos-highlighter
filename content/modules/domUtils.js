@@ -389,16 +389,6 @@ function createHighlightElement(node, index, text, highlightData) {
     }
 }
 
-// Normalize text for matching
-function normalizeTextForMatching(text) {
-    return text
-        .toLowerCase()
-        .replace(/\s+/g, ' ')
-        .replace(/\n/g, ' ')
-        .replace(/\t/g, ' ')
-        .replace(/[^\w\s\u4e00-\u9fff\u3400-\u4dbf\u20000-\u2a6df\u2a700-\u2b73f\u2b740-\u2b81f\u2b820-\u2ceaf]/g, '')
-        .trim();
-}
 
 // Clean context text from unwanted content
 function cleanContextText(text) {
@@ -453,7 +443,8 @@ function generateUUID() {
 }
 
 // Export all functions
-export {
+// Export all functions to window object
+window.LumosDomUtils = {
     getCommonParent,
     findNearestContentContainer,
     getVisibleTextContent,
@@ -466,7 +457,6 @@ export {
     getNextTextNodeInContainer,
     isNonContentText,
     createHighlightElement,
-    normalizeTextForMatching,
     cleanContextText,
     generateUUID
 };

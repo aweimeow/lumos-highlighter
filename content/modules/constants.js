@@ -2,24 +2,15 @@
 // Extracted from content.js to provide centralized configuration and default values
 
 // Default highlight styles and settings
-export const DEFAULT_STYLES = {
+const DEFAULT_STYLES = {
     cornerStyle: 'rectangular',
     backgroundStyle: 'transparent',
     textStyle: 'default',
     highlightMode: 'instant'
 };
 
-// Highlight colors available in the toolbar
-export const HIGHLIGHT_COLORS = [
-    'red',
-    'orange', 
-    'yellow',
-    'green',
-    'blue'
-];
-
 // Color button configurations with titles
-export const COLOR_BUTTON_CONFIG = [
+const COLOR_BUTTON_CONFIG = [
     { color: 'red', title: 'Red highlight' },
     { color: 'orange', title: 'Orange highlight' },
     { color: 'yellow', title: 'Yellow highlight' },
@@ -28,7 +19,7 @@ export const COLOR_BUTTON_CONFIG = [
 ];
 
 // Text and content validation constants
-export const TEXT_VALIDATION = {
+const TEXT_VALIDATION = {
     MIN_TEXT_LENGTH: 3,
     MIN_CONTEXT_LENGTH: 5,
     MAX_WORD_LENGTH: 30,
@@ -36,15 +27,8 @@ export const TEXT_VALIDATION = {
     PREVIEW_LENGTH: 100
 };
 
-// Retry configuration for dynamic content
-export const RETRY_CONFIG = {
-    MAX_RETRIES: 10,
-    RETRY_INTERVALS: [500, 1000, 2000, 3000, 5000, 8000, 12000],
-    LAZY_CONTENT_TIMEOUT: 1000
-};
-
 // Timeout values for various operations
-export const TIMEOUTS = {
+const TIMEOUTS = {
     // SPA navigation detection
     URL_CHANGE_CHECK: 100,
     URL_CHANGE_INTERVAL: 2000,
@@ -67,7 +51,7 @@ export const TIMEOUTS = {
 };
 
 // DOM observer configuration
-export const DOM_OBSERVER_CONFIG = {
+const DOM_OBSERVER_CONFIG = {
     childList: true,
     subtree: true,
     attributes: false,
@@ -77,7 +61,7 @@ export const DOM_OBSERVER_CONFIG = {
 };
 
 // Content detection selectors
-export const CONTENT_SELECTORS = {
+const CONTENT_SELECTORS = {
     // Priority selectors for content containers
     CONTENT_CONTAINERS: [
         'article', 'main', '[role="main"]', '.article', '.content', '.post',
@@ -100,7 +84,7 @@ export const CONTENT_SELECTORS = {
 };
 
 // Non-content text patterns (UI elements, navigation, etc.)
-export const NON_CONTENT_PATTERNS = [
+const NON_CONTENT_PATTERNS = [
     /^(menu|navigation|nav|click|button|link)$/,
     /^(login|logout|sign in|sign up|register)$/,
     /^(home|about|contact|privacy|terms)$/,
@@ -113,7 +97,7 @@ export const NON_CONTENT_PATTERNS = [
 ];
 
 // Text cleaning patterns for context extraction
-export const TEXT_CLEANING_PATTERNS = {
+const TEXT_CLEANING_PATTERNS = {
     // JavaScript/code removal
     FUNCTION_DECLARATIONS: /\b(function|var|let|const)\s+\w+\s*[=\(][^;{}]*[;}]/g,
     WINDOW_REFERENCES: /window\s*[=.\[].+?[;\]]/g,
@@ -141,7 +125,7 @@ export const TEXT_CLEANING_PATTERNS = {
 };
 
 // CSS class and ID validation
-export const CSS_VALIDATION = {
+const CSS_VALIDATION = {
     VALID_PATTERN: /^[a-zA-Z_][\w-]*$/,
     INVALID_CHARS: /[+(){}[\]="'<>.,!@#$%^&*|\\/?]/,
     MAX_DEPTH: 10,
@@ -150,7 +134,7 @@ export const CSS_VALIDATION = {
 };
 
 // Highlight element configuration
-export const HIGHLIGHT_CONFIG = {
+const HIGHLIGHT_CONFIG = {
     CLASS_PREFIX: 'lumos-highlight',
     COLOR_CLASS_PREFIX: 'lumos-highlight-',
     ATTRIBUTES: {
@@ -160,7 +144,7 @@ export const HIGHLIGHT_CONFIG = {
 };
 
 // Toolbar HTML templates
-export const TOOLBAR_TEMPLATES = {
+const TOOLBAR_TEMPLATES = {
     MAIN_TOOLBAR: `
         <div class="lumos-toolbar-colors">
             ${COLOR_BUTTON_CONFIG.map(config => 
@@ -181,7 +165,7 @@ export const TOOLBAR_TEMPLATES = {
 };
 
 // Text matching and normalization
-export const TEXT_MATCHING = {
+const TEXT_MATCHING = {
     // Characters to keep in normalized text
     KEEP_CHARS: /[\w\s\u4e00-\u9fff\u3400-\u4dbf\u20000-\u2a6df\u2a700-\u2b73f\u2b740-\u2b81f\u2b820-\u2ceaf]/g,
     
@@ -190,21 +174,15 @@ export const TEXT_MATCHING = {
 };
 
 // Performance thresholds
-export const PERFORMANCE = {
+const PERFORMANCE = {
     MAX_HIGHLIGHTS_PER_BATCH: 50,
     MAX_DOM_DEPTH: 20,
     MAX_TEXT_CONTENT_LENGTH: 100,
     SIGNIFICANT_CHANGE_THRESHOLD: 100
 };
 
-// Storage keys
-export const STORAGE_KEYS = {
-    HIGHLIGHT_STYLES: 'lumosHighlightStyles',
-    HIGHLIGHTS: 'lumosHighlights'
-};
-
 // Debug and logging configuration
-export const DEBUG_CONFIG = {
+const DEBUG_CONFIG = {
     ENABLED: true,
     LOG_PREFIXES: {
         HIGHLIGHT: '[Lumos Highlight]',
@@ -215,25 +193,23 @@ export const DEBUG_CONFIG = {
 };
 
 // Export current styles object (mutable reference)
-export let currentStyles = { ...DEFAULT_STYLES };
+let currentStyles = { ...DEFAULT_STYLES };
 
 // Function to update current styles
-export function updateCurrentStyles(newStyles) {
+function updateCurrentStyles(newStyles) {
     Object.assign(currentStyles, newStyles);
 }
 
 // Function to reset styles to defaults
-export function resetCurrentStyles() {
+function resetCurrentStyles() {
     Object.assign(currentStyles, DEFAULT_STYLES);
 }
 
-// Export all constants as a single object for easy access
-export const CONSTANTS = {
+// All constants as a single object for easy access
+const CONSTANTS = {
     DEFAULT_STYLES,
-    HIGHLIGHT_COLORS,
     COLOR_BUTTON_CONFIG,
     TEXT_VALIDATION,
-    RETRY_CONFIG,
     TIMEOUTS,
     DOM_OBSERVER_CONFIG,
     CONTENT_SELECTORS,
@@ -244,6 +220,27 @@ export const CONSTANTS = {
     TOOLBAR_TEMPLATES,
     TEXT_MATCHING,
     PERFORMANCE,
-    STORAGE_KEYS,
     DEBUG_CONFIG
+};
+
+// Assign to global window object
+window.LumosContentConstants = {
+    DEFAULT_STYLES,
+    COLOR_BUTTON_CONFIG,
+    TEXT_VALIDATION,
+    TIMEOUTS,
+    DOM_OBSERVER_CONFIG,
+    CONTENT_SELECTORS,
+    NON_CONTENT_PATTERNS,
+    TEXT_CLEANING_PATTERNS,
+    CSS_VALIDATION,
+    HIGHLIGHT_CONFIG,
+    TOOLBAR_TEMPLATES,
+    TEXT_MATCHING,
+    PERFORMANCE,
+    DEBUG_CONFIG,
+    CONSTANTS,
+    currentStyles,
+    updateCurrentStyles,
+    resetCurrentStyles
 };
