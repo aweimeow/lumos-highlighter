@@ -204,14 +204,6 @@ class ExportMessaging {
         return MessagingSystem.sendToBackground(MESSAGE_TYPES.EXPORT_PAGE_SUMMARY, { tab });
     }
 
-    /**
-     * Export all sites summary
-     * @returns {Promise<Object>} Response
-     */
-    static async exportAllSitesSummary() {
-        const MESSAGE_TYPES = window.LumosSharedConstants.MESSAGE_TYPES;
-        return MessagingSystem.sendToBackground(MESSAGE_TYPES.EXPORT_ALL_SITES_SUMMARY);
-    }
 
     /**
      * Get export selection data

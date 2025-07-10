@@ -12,18 +12,11 @@ chrome.runtime.onInstalled.addListener(() => {
         contexts: ['page']
     });
 
-    // Create export options
+    // Create export option
     chrome.contextMenus.create({
         id: 'export-page-summary',
         parentId: 'lumos-highlighter',
-        title: 'Export page summary to PDF',
-        contexts: ['page']
-    });
-
-    chrome.contextMenus.create({
-        id: 'export-all-sites-summary',
-        parentId: 'lumos-highlighter',
-        title: 'Export all sites summary to PDF',
+        title: 'Export highlights to PDF',
         contexts: ['page']
     });
 
@@ -47,9 +40,6 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     switch (info.menuItemId) {
         case 'export-page-summary':
             exportPageSummary(tab);
-            break;
-        case 'export-all-sites-summary':
-            exportAllSitesSummary();
             break;
         case 'manage-highlights':
             openManagementInterface();
@@ -384,35 +374,6 @@ async function exportPageSummary(tab) {
     }
 }
 
-// Export all sites summary to PDF (now opens selection interface)
-async function exportAllSitesSummary() {
-    try {
-        const result = await chrome.storage.local.get(['lumosHighlights']);
-        const data = result.lumosHighlights;
-        
-        if (!data || !data.websites) {
-            console.log('No highlights found');
-            // Still open the selection interface even if no data, user will see empty state
-        }
-        
-        // Create selection interface tab and make it active
-        const selectionTab = await chrome.tabs.create({
-            url: chrome.runtime.getURL('options/export-selection.html'),
-            active: true
-        });
-        
-        // Wait for the tab to load, then send the data
-        setTimeout(() => {
-            chrome.tabs.sendMessage(selectionTab.id, {
-                action: 'initExportSelection',
-                data: data || { websites: {}, metadata: { total_highlights: 0 } }
-            });
-        }, 1000);
-        
-    } catch (error) {
-        console.error('Error opening export selection:', error);
-    }
-}
 
 // Get data for export selection interface
 async function getExportSelectionData() {
