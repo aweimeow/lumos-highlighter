@@ -201,6 +201,9 @@ function setupDebugToggle() {
     debugActivationArea.addEventListener('click', function() {
         isDebugEnabled = !isDebugEnabled;
         
+        // Add flipping animation
+        debugPageFlip.classList.add('flipping');
+        
         // Save debug state to storage
         chrome.storage.local.set({ lumosDebugMode: isDebugEnabled }, function() {
             updateDebugUI();
@@ -209,18 +212,23 @@ function setupDebugToggle() {
             // Notify content scripts about debug mode change
             notifyDebugModeChange(isDebugEnabled);
         });
+        
+        // Remove flipping animation after it completes
+        setTimeout(() => {
+            debugPageFlip.classList.remove('flipping');
+        }, 600);
     });
     
     // Update debug UI state
     function updateDebugUI() {
         if (isDebugEnabled) {
             debugPageFlip.classList.add('flipped');
-            debugText.textContent = 'debug on';
-            debugText.style.color = '#28a745';
+            debugText.textContent = 'debug';
+            debugText.style.color = '#e91e63';
         } else {
             debugPageFlip.classList.remove('flipped');
-            debugText.textContent = 'turn on debug';
-            debugText.style.color = '#495057';
+            debugText.textContent = 'debug';
+            debugText.style.color = '#e91e63';
         }
     }
     

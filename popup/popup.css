@@ -423,8 +423,8 @@
     position: absolute;
     top: 0;
     left: 0;
-    width: 50px;
-    height: 50px;
+    width: 40px;
+    height: 40px;
     z-index: 100;
     pointer-events: none;
 }
@@ -433,7 +433,7 @@
     position: relative;
     width: 100%;
     height: 100%;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .debug-toggle-wrapper {
@@ -446,79 +446,147 @@
     position: absolute;
     top: 0;
     left: 0;
-    width: 50px;
-    height: 50px;
+    width: 40px;
+    height: 40px;
     cursor: pointer;
     z-index: 10;
     pointer-events: all;
 }
 
 .debug-page-flip {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 50px;
-    height: 50px;
+    position: relative;
+    width: 40px;
+    height: 40px;
     pointer-events: none;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    perspective: 1000px;
 }
 
-.debug-page-triangle {
+/* Paper base */
+.debug-page-back {
     position: absolute;
     top: 0;
     left: 0;
-    width: 0;
-    height: 0;
-    border-style: solid;
-    border-width: 25px 0 0 25px;
-    border-color: #e9ecef transparent transparent #e9ecef;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    transform-origin: top left;
-}
-
-.debug-activation-area:hover + .debug-page-flip .debug-page-triangle {
-    border-width: 40px 0 0 40px;
-    border-color: #e9ecef transparent transparent #e9ecef;
-}
-
-.debug-page-flip.flipped .debug-page-triangle {
-    border-width: 40px 0 0 40px;
-    border-color: #fff transparent transparent #fff;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.debug-text {
-    position: absolute;
-    top: 5px;
-    left: 5px;
-    font-size: 7px;
-    font-weight: 500;
-    color: #495057;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    writing-mode: vertical-lr;
-    text-orientation: mixed;
+    width: 40px;
+    height: 40px;
+    background: #f8f9fa;
+    border-radius: 2px;
     opacity: 0;
     transition: opacity 0.3s ease;
+}
+
+/* Folded corner - using real 3D flip */
+.debug-page-front {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(-45deg, #ffb3d9 50%, #f0f0f0 50%);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    transform-origin: bottom right;
+    transform: rotateX(0deg) rotateY(0deg);
+    border-radius: 0 0 2px 0;
+}
+
+/* Curved shadow effect for folded corner */
+.debug-page-front::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        -45deg, 
+        rgba(0, 0, 0, 0.1) 0%, 
+        transparent 40%, 
+        transparent 60%, 
+        rgba(255, 255, 255, 0.3) 100%
+    );
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+/* Hover state */
+.debug-activation-area:hover + .debug-page-flip .debug-page-back {
+    opacity: 0.6;
+}
+
+.debug-activation-area:hover + .debug-page-flip .debug-page-front {
+    opacity: 0.7;
+    transform: rotateX(-5deg) rotateY(5deg);
+}
+
+.debug-activation-area:hover + .debug-page-flip .debug-page-front::after {
+    opacity: 0.5;
+}
+
+/* Active state */
+.debug-page-flip.flipped .debug-page-back {
+    opacity: 1;
+}
+
+.debug-page-flip.flipped .debug-page-front {
+    opacity: 1;
+    transform: rotateX(-15deg) rotateY(15deg);
+}
+
+.debug-page-flip.flipped .debug-page-front::after {
+    opacity: 1;
+}
+
+/* Page flip animation */
+.debug-page-flip.flipping .debug-page-front {
+    animation: pageFlip3D 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+@keyframes pageFlip3D {
+    0% {
+        opacity: 0;
+        transform: rotateX(0deg) rotateY(0deg);
+    }
+    25% {
+        opacity: 0.3;
+        transform: rotateX(-5deg) rotateY(5deg);
+    }
+    50% {
+        opacity: 0.6;
+        transform: rotateX(-10deg) rotateY(10deg);
+    }
+    75% {
+        opacity: 0.8;
+        transform: rotateX(-12deg) rotateY(12deg);
+    }
+    100% {
+        opacity: 1;
+        transform: rotateX(-15deg) rotateY(15deg);
+    }
+}
+
+/* Text styles */
+.debug-text {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    font-size: 5px;
+    font-weight: 700;
+    color: #e91e63;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    opacity: 0;
+    transition: opacity 0.3s ease 0.2s;
     pointer-events: none;
     transform: rotate(-45deg);
     transform-origin: center;
-    width: 50px;
+    width: 14px;
     text-align: center;
     line-height: 1;
     white-space: nowrap;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9);
+    z-index: 2;
 }
 
 .debug-page-flip.flipped .debug-text {
     opacity: 1;
-    color: #28a745;
-}
-
-.debug-activation-area:hover + .debug-page-flip .debug-text {
-    opacity: 0.8;
-}
-
-/* Hide debug toggle when not active */
-.debug-toggle-container:not(:hover) .debug-page-flip:not(.flipped) .debug-page-triangle {
-    border-width: 20px 0 0 20px;
-    opacity: 0.3;
 }
