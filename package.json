@@ -1,6 +1,6 @@
 {
   "name": "lumos-highlighter",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Highlight text across web pages with five colors, store locally, and export as organized PDF notes",
   "scripts": {
     "test": "jest",
