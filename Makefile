@@ -1,7 +1,7 @@
 # Makefile for Lumos Highlighter
 # Provides commands for testing, building, and maintaining the Chrome extension
 
-.PHONY: help install test test-watch test-coverage clean lint build package
+.PHONY: help install test test-watch test-coverage clean lint build package make-zip
 
 # Default target
 help:
@@ -16,7 +16,8 @@ help:
 	@echo "  make lint         - Run linting checks"
 	@echo "  make clean        - Clean temporary files"
 	@echo "  make build        - Build extension for production"
-	@echo "  make package      - Create extension package"
+	@echo "  make package      - Create extension package (legacy)"
+	@echo "  make make-zip     - Create optimized ZIP for Chrome Web Store"
 	@echo "  make help         - Show this help message"
 
 # Install dependencies
@@ -59,15 +60,24 @@ clean:
 # Build extension (prepare for production)
 build:
 	@echo "Building extension..."
-	@echo "Note: Chrome extensions typically don't need a build step"
-	@echo "Extension files are ready for loading in Chrome developer mode"
+	@node scripts/build.js
+	@echo ""
+	@echo "Build complete! Files are ready in build/ directory"
 	@echo ""
 	@echo "To load in Chrome:"
 	@echo "1. Open Chrome and go to chrome://extensions/"
 	@echo "2. Enable 'Developer mode'"
-	@echo "3. Click 'Load unpacked' and select this directory"
+	@echo "3. Click 'Load unpacked' and select the build/ directory"
 
-# Create extension package
+# Create optimized ZIP for Chrome Web Store
+make-zip:
+	@echo "Creating optimized ZIP for Chrome Web Store..."
+	@node scripts/build.js
+	@echo ""
+	@echo "ZIP package created successfully!"
+	@echo "Ready for upload to Chrome Web Store"
+
+# Create extension package (legacy)
 package: test
 	@echo "Creating extension package..."
 	@mkdir -p dist
