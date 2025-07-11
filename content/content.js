@@ -35,6 +35,9 @@ function init() {
     // Setup SPA navigation detection
     window.LumosEventHandler.setupSPANavigationDetection();
     
+    // Load saved styles and set double click mode
+    loadSavedStyles();
+    
     // Restore existing highlights on page load
     window.LumosStorageManager.restoreHighlights();
     
@@ -43,6 +46,50 @@ function init() {
     
     if (window.LumosLogger) {
         window.LumosLogger.info('✅ Lumos Highlighter initialized successfully');
+    }
+}
+
+// Load saved styles and set double click mode
+function loadSavedStyles() {
+    try {
+        // Check if chrome.storage is available
+        if (!chrome || !chrome.storage || !chrome.storage.sync) {
+            if (window.LumosLogger) {
+                window.LumosLogger.warn('Chrome storage not available, using default styles');
+            }
+            return;
+        }
+        
+        chrome.storage.sync.get(['lumosHighlightStyles'], function(result) {
+            if (chrome.runtime.lastError) {
+                if (window.LumosLogger) {
+                    window.LumosLogger.error('Error loading styles:', chrome.runtime.lastError);
+                }
+                return;
+            }
+            
+            const styles = result.lumosHighlightStyles || {};
+            
+            // Set double click mode based on highlight mode
+            if (styles.highlightMode) {
+                const isDoubleClickMode = styles.highlightMode === 'doubleclick';
+                if (window.LumosEventHandler) {
+                    window.LumosEventHandler.setDoubleClickDragMode(isDoubleClickMode);
+                    if (window.LumosLogger) {
+                        window.LumosLogger.debug('Double click mode loaded from storage:', isDoubleClickMode);
+                    }
+                }
+            }
+            
+            // Update styles in highlight manager
+            if (window.LumosHighlightManager) {
+                window.LumosHighlightManager.updateHighlightStyles(styles);
+            }
+        });
+    } catch (error) {
+        if (window.LumosLogger) {
+            window.LumosLogger.error('Error loading saved styles:', error);
+        }
     }
 }
 
@@ -65,6 +112,16 @@ function setupMessageListener() {
                     break;
                 case 'updateHighlightStyles':
                     window.LumosHighlightManager.updateHighlightStyles(request.styles);
+                    // Update double click mode based on highlight mode
+                    if (request.styles && request.styles.highlightMode) {
+                        const isDoubleClickMode = request.styles.highlightMode === 'doubleclick';
+                        if (window.LumosEventHandler) {
+                            window.LumosEventHandler.setDoubleClickDragMode(isDoubleClickMode);
+                            if (window.LumosLogger) {
+                                window.LumosLogger.debug('Double click mode updated:', isDoubleClickMode);
+                            }
+                        }
+                    }
                     break;
                 case 'getStorageStats':
                     window.LumosStorageManager.getStorageStats().then(stats => sendResponse(stats));
@@ -255,6 +312,7 @@ if (document.readyState === 'loading') {
 // Export for module compatibility - now using global scope
 window.LumosContent = {
     init,
+    loadSavedStyles,
     handleRemoveAllHighlightsConfirmation,
     highlightComplexRange
 };
