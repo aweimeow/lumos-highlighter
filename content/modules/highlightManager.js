@@ -23,12 +23,14 @@ function applyHighlight(color, selection) {
         position: window.LumosPositionDataGenerator.getPositionData(range)
     };
     
-    console.log('Highlight data being saved:', {
-        text: highlightData.text,
-        context_before: highlightData.context_before,
-        context_after: highlightData.context_after,
-        domain: new URL(window.location.href).hostname
-    });
+    if (window.LumosLogger) {
+        window.LumosLogger.debug('Highlight data being saved:', {
+            text: highlightData.text,
+            context_before: highlightData.context_before,
+            context_after: highlightData.context_after,
+            domain: new URL(window.location.href).hostname
+        });
+    }
     
     // Apply highlight to DOM
     const highlightElement = document.createElement('span');
@@ -42,32 +44,34 @@ function applyHighlight(color, selection) {
     try {
         // Validate range before highlighting
         if (range.collapsed) {
-            console.warn('Cannot highlight collapsed range');
+            if (window.LumosLogger) { window.LumosLogger.warn('Cannot highlight collapsed range'); }
             return;
         }
         
         // Additional validation
         const selectedText = range.toString().trim();
         if (selectedText.length === 0) {
-            console.warn('Cannot highlight empty selection');
+            if (window.LumosLogger) { window.LumosLogger.warn('Cannot highlight empty selection'); }
             return;
         }
         
-        console.log('Attempting to highlight:', {
-            text: selectedText,
-            startContainer: range.startContainer.nodeName,
-            endContainer: range.endContainer.nodeName,
-            startOffset: range.startOffset,
-            endOffset: range.endOffset
-        });
+        if (window.LumosLogger) { 
+            window.LumosLogger.debug('Attempting to highlight:', {
+                text: selectedText,
+                startContainer: range.startContainer.nodeName,
+                endContainer: range.endContainer.nodeName,
+                startOffset: range.startOffset,
+                endOffset: range.endOffset
+            }); 
+        }
         
         // Use a more robust highlighting method
         if (!highlightRangeRobustly(range, highlightElement)) {
-            console.warn('Cannot highlight this selection');
+            if (window.LumosLogger) { window.LumosLogger.warn('Cannot highlight this selection'); }
             return;
         }
         
-        console.log('Highlight successfully applied');
+        if (window.LumosLogger) { window.LumosLogger.debug('Highlight successfully applied'); }
         
         // Clear selection first to ensure UI responds properly
         window.getSelection().removeAllRanges();
@@ -76,11 +80,11 @@ function applyHighlight(color, selection) {
         try {
             window.LumosStorageManager.saveHighlight(highlightData);
         } catch (error) {
-            console.log('Could not save highlight to storage, but highlight applied to DOM:', error);
+            if (window.LumosLogger) { window.LumosLogger.debug('Could not save highlight to storage, but highlight applied to DOM:', error); }
         }
         
     } catch (error) {
-        console.error('Error applying highlight:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error applying highlight:', error); }
         // Clean up any partially created elements
         if (highlightElement.parentNode) {
             highlightElement.parentNode.removeChild(highlightElement);
@@ -110,9 +114,17 @@ function changeHighlightColor(highlightElement, newColor) {
         window.LumosStyleManager.applyStylesToHighlight(part);
     });
     
-    // Update storage (async, non-blocking)
+    // Update storage (async, non-blocking) - with proper error handling
     setTimeout(() => {
         try {
+            // Check if chrome.runtime is available
+            if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) {
+                if (window.LumosLogger) { 
+                    window.LumosLogger.debug('Chrome runtime not available, skipping storage update'); 
+                }
+                return;
+            }
+            
             const domain = new URL(window.location.href).hostname;
             chrome.runtime.sendMessage({
                 action: 'updateHighlightColor',
@@ -121,11 +133,15 @@ function changeHighlightColor(highlightElement, newColor) {
                 newColor: newColor
             }, (response) => {
                 if (chrome.runtime.lastError) {
-                    console.log('Extension context invalidated, cannot update color in storage:', chrome.runtime.lastError.message);
+                    if (window.LumosLogger) { 
+                        window.LumosLogger.debug('Extension context invalidated, cannot update color in storage:', chrome.runtime.lastError.message); 
+                    }
                 }
             });
         } catch (error) {
-            console.log('Extension context invalidated, cannot update color in storage:', error);
+            if (window.LumosLogger) { 
+                window.LumosLogger.debug('Extension context invalidated, cannot update color in storage:', error); 
+            }
         }
     }, 0);
 }
@@ -157,18 +173,20 @@ function removeHighlight(highlightElement) {
 
 // Restore individual highlight using a robust text-based approach
 function restoreHighlight(highlightData, addToPending = true) {
-    console.log('🔄 Attempting to restore highlight:', {
-        text: highlightData.text.substring(0, 50) + '...',
-        textLength: highlightData.text.length,
-        color: highlightData.color,
-        id: highlightData.id,
-        context_before: highlightData.context_before ? highlightData.context_before.substring(0, 30) + '...' : 'none',
-        context_after: highlightData.context_after ? highlightData.context_after.substring(0, 30) + '...' : 'none'
-    });
+    if (window.LumosLogger) { 
+        window.LumosLogger.debug('🔄 Attempting to restore highlight:', {
+            text: highlightData.text.substring(0, 50) + '...',
+            textLength: highlightData.text.length,
+            color: highlightData.color,
+            id: highlightData.id,
+            context_before: highlightData.context_before ? highlightData.context_before.substring(0, 30) + '...' : 'none',
+            context_after: highlightData.context_after ? highlightData.context_after.substring(0, 30) + '...' : 'none'
+        }); 
+    }
     
     // Skip if already highlighted
     if (document.querySelector(`[data-highlight-id="${highlightData.id}"]`)) {
-        console.log('✅ Highlight already exists, skipping');
+        if (window.LumosLogger) { window.LumosLogger.debug('✅ Highlight already exists, skipping'); }
         return true;
     }
     
@@ -176,10 +194,10 @@ function restoreHighlight(highlightData, addToPending = true) {
     const success = restoreHighlightByTextContent(highlightData);
     
     if (success) {
-        console.log('✅ Successfully restored highlight:', highlightData.text.substring(0, 30) + '...');
+        if (window.LumosLogger) { window.LumosLogger.debug('✅ Successfully restored highlight:', highlightData.text.substring(0, 30) + '...'); }
         return true;
     } else {
-        console.log('❌ Failed to restore highlight:', highlightData.text.substring(0, 30) + '...');
+        if (window.LumosLogger) { window.LumosLogger.debug('❌ Failed to restore highlight:', highlightData.text.substring(0, 30) + '...'); }
         return false;
     }
 }
@@ -226,7 +244,7 @@ function restoreHighlightByTextContent(highlightData) {
         }
         
         if (candidates.length === 0) {
-            console.log('No text matches found for:', text.substring(0, 30));
+            if (window.LumosLogger) { window.LumosLogger.debug('No text matches found for:', text.substring(0, 30)); }
             return false;
         }
         
@@ -240,9 +258,9 @@ function restoreHighlightByTextContent(highlightData) {
         // Sort by score (highest first)
         candidates.sort((a, b) => b.score - a.score);
         
-        console.log(`Found ${candidates.length} candidates for: "${text.substring(0, 30)}...":`);
+        if (window.LumosLogger) { window.LumosLogger.debug(`Found ${candidates.length} candidates for: "${text.substring(0, 30)}...":`); }
         candidates.forEach((candidate, i) => {
-            console.log(`  ${i + 1}. Score: ${candidate.score}, Strategy: ${candidate.strategy}`);
+            if (window.LumosLogger) { window.LumosLogger.debug(`  ${i + 1}. Score: ${candidate.score}, Strategy: ${candidate.strategy}`); }
         });
         
         // Try to highlight the best candidate
@@ -256,7 +274,7 @@ function restoreHighlightByTextContent(highlightData) {
         return false;
         
     } catch (error) {
-        console.error('Error in text-based restoration:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error in text-based restoration:', error); }
         return false;
     }
 }
@@ -299,11 +317,13 @@ function createSimpleHighlight(textNode, startIndex, text, highlightData) {
         if (bestMatch) {
             actualLength = bestMatch.length;
             rangeText = bestMatch.text;
-            console.log('📍 Using flexible match:', {
-                original: text.substring(0, 30) + '...',
-                matched: rangeText.substring(0, 30) + '...',
-                similarity: bestMatch.similarity
-            });
+            if (window.LumosLogger) { 
+                window.LumosLogger.debug('📍 Using flexible match:', {
+                    original: text.substring(0, 30) + '...',
+                    matched: rangeText.substring(0, 30) + '...',
+                    similarity: bestMatch.similarity
+                }); 
+            }
         } else {
             // Fallback to original length
             rangeText = nodeText.substring(startIndex, startIndex + actualLength);
@@ -313,11 +333,13 @@ function createSimpleHighlight(textNode, startIndex, text, highlightData) {
             const similarity = window.LumosTextMatcher.calculateTextSimilarity(normalizedRange, normalizedTarget);
             
             if (similarity < 0.7) {
-                console.warn('Text similarity too low:', {
-                    similarity: similarity,
-                    expected: text.substring(0, 50),
-                    actual: rangeText.substring(0, 50)
-                });
+                if (window.LumosLogger) { 
+                    window.LumosLogger.warn('Text similarity too low:', {
+                        similarity: similarity,
+                        expected: text.substring(0, 50),
+                        actual: rangeText.substring(0, 50)
+                    }); 
+                }
                 return false;
             }
         }
@@ -327,7 +349,7 @@ function createSimpleHighlight(textNode, startIndex, text, highlightData) {
         range.setEnd(textNode, startIndex + actualLength);
         
         if (range.collapsed) {
-            console.warn('Range is collapsed, cannot highlight');
+            if (window.LumosLogger) { window.LumosLogger.warn('Range is collapsed, cannot highlight'); }
             return false;
         }
         
@@ -341,11 +363,11 @@ function createSimpleHighlight(textNode, startIndex, text, highlightData) {
         
         range.surroundContents(highlightElement);
         
-        console.log('✅ Flexible highlight created successfully:', rangeText.substring(0, 30) + '...');
+        if (window.LumosLogger) { window.LumosLogger.debug('✅ Flexible highlight created successfully:', rangeText.substring(0, 30) + '...'); }
         return true;
         
     } catch (error) {
-        console.error('Error creating simple highlight:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error creating simple highlight:', error); }
         return false;
     }
 }
@@ -365,7 +387,7 @@ function highlightRangeRobustly(range, highlightElement) {
         return highlightComplexRange(range, highlightElement);
         
     } catch (error) {
-        console.error('Highlighting failed:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Highlighting failed:', error); }
         return false;
     }
 }
@@ -377,7 +399,7 @@ function highlightComplexRange(range, highlightElement) {
         const textNodes = window.LumosDomUtils.getTextNodesInRange(range);
         
         if (textNodes.length === 0) {
-            console.warn('No text nodes found in range');
+            if (window.LumosLogger) { window.LumosLogger.warn('No text nodes found in range'); }
             return false;
         }
         
@@ -436,14 +458,14 @@ function highlightComplexRange(range, highlightElement) {
             try {
                 nodeRange.surroundContents(nodeHighlightElement);
             } catch (error) {
-                console.warn('Failed to highlight text node part:', error);
+                if (window.LumosLogger) { window.LumosLogger.warn('Failed to highlight text node part:', error); }
             }
         }
         
         return true;
         
     } catch (error) {
-        console.error('Error in complex range highlighting:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error in complex range highlighting:', error); }
         return false;
     }
 }
@@ -510,7 +532,7 @@ function scoreTextCandidate(candidate, targetText, contextBefore, contextAfter) 
         return score;
         
     } catch (error) {
-        console.warn('Error scoring candidate:', error);
+        if (window.LumosLogger) { window.LumosLogger.warn('Error scoring candidate:', error); }
         return 0;
     }
 }
@@ -571,7 +593,7 @@ function getExtendedContext(startNode, direction, initialText, maxLength) {
         return context.trim();
         
     } catch (error) {
-        console.warn('Error getting extended context:', error);
+        if (window.LumosLogger) { window.LumosLogger.warn('Error getting extended context:', error); }
         return initialText;
     }
 }
@@ -615,7 +637,7 @@ function getBackupContext(direction, range) {
             }
         }
     } catch (error) {
-        console.error('Error in backup context extraction:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error in backup context extraction:', error); }
     }
     
     return '';

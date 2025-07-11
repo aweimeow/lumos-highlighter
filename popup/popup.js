@@ -1,7 +1,7 @@
 // Popup script for Lumos Highlighter
 // Handles highlight style customization settings
 
-console.log('Lumos Highlighter popup loaded');
+// Popup script - minimal logging for popup context
 
 // Default style settings
 const defaultStyles = {
@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     initializeStyleSettings();
     setupEventListeners();
+    setupDebugToggle();
 });
 
 // Initialize style settings from storage
@@ -175,6 +176,86 @@ function handleCoffeeClick(event) {
     setTimeout(() => {
         window.open('https://coff.ee/weiyudev', '_blank');
     }, 1500);
+}
+
+// Setup debug toggle functionality
+function setupDebugToggle() {
+    const debugActivationArea = document.querySelector('.debug-activation-area');
+    const debugPageFlip = document.querySelector('.debug-page-flip');
+    const debugText = document.querySelector('.debug-text');
+    
+    if (!debugActivationArea || !debugPageFlip || !debugText) {
+        console.error('Debug toggle elements not found');
+        return;
+    }
+    
+    let isDebugEnabled = false;
+    
+    // Get initial debug state
+    chrome.storage.local.get(['lumosDebugMode'], function(result) {
+        isDebugEnabled = result.lumosDebugMode === true;
+        updateDebugUI();
+    });
+    
+    // Click handler for debug toggle
+    debugActivationArea.addEventListener('click', function() {
+        isDebugEnabled = !isDebugEnabled;
+        
+        // Save debug state to storage
+        chrome.storage.local.set({ lumosDebugMode: isDebugEnabled }, function() {
+            updateDebugUI();
+            showDebugFeedback();
+            
+            // Notify content scripts about debug mode change
+            notifyDebugModeChange(isDebugEnabled);
+        });
+    });
+    
+    // Update debug UI state
+    function updateDebugUI() {
+        if (isDebugEnabled) {
+            debugPageFlip.classList.add('flipped');
+            debugText.textContent = 'debug on';
+            debugText.style.color = '#28a745';
+        } else {
+            debugPageFlip.classList.remove('flipped');
+            debugText.textContent = 'turn on debug';
+            debugText.style.color = '#495057';
+        }
+    }
+    
+    // Show debug toggle feedback
+    function showDebugFeedback() {
+        // Brief animation feedback
+        debugPageFlip.style.transform = 'scale(1.1)';
+        setTimeout(() => {
+            debugPageFlip.style.transform = 'scale(1)';
+        }, 150);
+        
+        // Console feedback
+        if (isDebugEnabled) {
+            console.log('🔍 [Lumos Debug] Debug mode enabled - console logs will now appear');
+        } else {
+            console.log('🔍 [Lumos Debug] Debug mode disabled - console logs are now hidden');
+        }
+    }
+    
+    // Notify all content scripts about debug mode change
+    function notifyDebugModeChange(enabled) {
+        chrome.tabs.query({}, function(tabs) {
+            tabs.forEach(tab => {
+                chrome.tabs.sendMessage(tab.id, {
+                    action: 'updateDebugMode',
+                    enabled: enabled
+                }, function(response) {
+                    // Ignore errors for tabs that don't have the content script
+                    if (chrome.runtime.lastError) {
+                        // Silent fail - not all tabs have content scripts
+                    }
+                });
+            });
+        });
+    }
 }
 
 // Create fireworks animation

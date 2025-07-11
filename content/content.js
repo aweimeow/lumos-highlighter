@@ -4,7 +4,7 @@
 // All modules are loaded through the content script injection in manifest.json
 // Access all functionality through global window objects:
 
-console.log('Lumos Highlighter content script loaded');
+// Initial load message - will be controlled by debug mode once logger is available
 
 // Global state management
 let lastClickTime = 0;
@@ -12,14 +12,22 @@ let clickCount = 0;
 
 // Main initialization function
 function init() {
-    console.log('🚀 Initializing Lumos Highlighter...');
+    // Only log if logger is available and debug mode is enabled
+    if (window.LumosLogger) {
+        window.LumosLogger.info('🚀 Initializing Lumos Highlighter...');
+    }
     
     // Wait for all modules to load
     if (!window.LumosEventHandler || !window.LumosStorageManager || !window.LumosToolbarManager) {
-        console.log('Waiting for modules to load...');
+        if (window.LumosLogger) {
+            window.LumosLogger.debug('Waiting for modules to load...');
+        }
         setTimeout(init, 100);
         return;
     }
+    
+    // Note: Debug toggle is now in popup, not content script
+    // Content script will receive debug mode updates via messages
     
     // Initialize event handlers
     window.LumosEventHandler.init();
@@ -33,12 +41,23 @@ function init() {
     // Setup message listener for background communication
     setupMessageListener();
     
-    console.log('✅ Lumos Highlighter initialized successfully');
+    if (window.LumosLogger) {
+        window.LumosLogger.info('✅ Lumos Highlighter initialized successfully');
+    }
 }
 
 // Setup message listener for background script communication
 function setupMessageListener() {
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    try {
+        // Check if chrome.runtime is available
+        if (!chrome || !chrome.runtime || !chrome.runtime.onMessage) {
+            if (window.LumosLogger) {
+                window.LumosLogger.warn('Chrome runtime not available, message listener not set up');
+            }
+            return;
+        }
+        
+        chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         try {
             switch (request.action) {
                 case 'confirmRemoveAllHighlights':
@@ -50,13 +69,27 @@ function setupMessageListener() {
                 case 'getStorageStats':
                     window.LumosStorageManager.getStorageStats().then(stats => sendResponse(stats));
                     return true; // Async response
+                case 'updateDebugMode':
+                    if (window.LumosLogger) {
+                        window.LumosLogger.setDebugMode(request.enabled);
+                    }
+                    break;
                 default:
-                    console.log('Unknown message action:', request.action);
+                    if (window.LumosLogger) {
+                        window.LumosLogger.debug('Unknown message action:', request.action);
+                    }
             }
         } catch (error) {
-            console.error('Error handling message:', error);
+            if (window.LumosLogger) {
+                window.LumosLogger.error('Error handling message:', error);
+            }
         }
     });
+    } catch (error) {
+        if (window.LumosLogger) {
+            window.LumosLogger.error('Error setting up message listener:', error);
+        }
+    }
 }
 
 // Handle confirmation dialog for removing all highlights
@@ -88,7 +121,9 @@ function highlightComplexRange(range, highlightElement) {
         const textNodes = window.LumosTextSelectionValidator.getTextNodesInRange(range);
         
         if (textNodes.length === 0) {
-            console.warn('No text nodes found in range');
+            if (window.LumosLogger) {
+                window.LumosLogger.warn('No text nodes found in range');
+            }
             return false;
         }
         
@@ -150,7 +185,9 @@ function highlightComplexRange(range, highlightElement) {
                 nodeRange.surroundContents(nodeHighlightElement);
                 highlightNodes.push(nodeHighlightElement);
             } catch (error) {
-                console.warn(`Failed to highlight text node ${i + 1}:`, error);
+                if (window.LumosLogger) {
+                    window.LumosLogger.warn(`Failed to highlight text node ${i + 1}:`, error);
+                }
                 continue;
             }
         }
@@ -158,7 +195,9 @@ function highlightComplexRange(range, highlightElement) {
         return highlightNodes.length > 0;
         
     } catch (error) {
-        console.error('Error in complex range highlighting:', error);
+        if (window.LumosLogger) {
+            window.LumosLogger.error('Error in complex range highlighting:', error);
+        }
         return false;
     }
 }
@@ -182,6 +221,10 @@ window.lumosHighlighter = {
     get normalizeText() { return window.LumosTextMatcher?.normalizeText; },
     get getStorageStats() { return window.LumosStorageManager?.getStorageStats; },
     get generateUUID() { return window.LumosDomUtils?.generateUUID; },
+    
+    // Debug controls (now managed by popup)
+    get getDebugMode() { return window.LumosLogger?.getDebugMode; },
+    get setDebugMode() { return window.LumosLogger?.setDebugMode; },
     
     testTextMatching: function(targetText) {
         const allTextNodes = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);

@@ -57,7 +57,7 @@ function scoreContentContext(element, targetText) {
         
         return similarity;
     } catch (error) {
-        console.error('Error scoring content context:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error scoring content context:', error); }
         return 0;
     }
 }

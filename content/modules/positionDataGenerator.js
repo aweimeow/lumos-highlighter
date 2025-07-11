@@ -25,7 +25,7 @@ function getPositionData(range) {
             xpath: getXPathForNode(range.commonAncestorContainer)
         };
     } catch (error) {
-        console.error('Error generating position data:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error generating position data:', error); }
         return {
             startOffset: 0,
             endOffset: 0,
@@ -67,7 +67,7 @@ function getXPathForNode(node) {
         
         return parts.length ? '/' + parts.join('/') : '';
     } catch (error) {
-        console.error('Error generating XPath:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error generating XPath:', error); }
         return '';
     }
 }
@@ -80,7 +80,7 @@ function getTextIndex(node, text) {
         const nodeText = node.textContent || '';
         return nodeText.indexOf(text);
     } catch (error) {
-        console.error('Error getting text index:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error getting text index:', error); }
         return -1;
     }
 }
@@ -109,7 +109,7 @@ function mapNormalizedToOriginalSimple(originalText, normalizedText, normalizedP
         
         return Math.min(originalIndex, originalText.length);
     } catch (error) {
-        console.error('Error mapping normalized position:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error mapping normalized position:', error); }
         return 0;
     }
 }

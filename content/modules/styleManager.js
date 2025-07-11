@@ -35,7 +35,7 @@ function applyStylesToHighlight(highlightElement) {
         highlightElement.style.cursor = 'pointer';
         
     } catch (error) {
-        console.error('Error applying styles to highlight:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error applying styles to highlight:', error); }
     }
 }
 
@@ -67,7 +67,7 @@ function updateHighlightStyles(newStyles) {
         });
         
     } catch (error) {
-        console.error('Error updating highlight styles:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error updating highlight styles:', error); }
     }
 }
 
@@ -84,7 +84,7 @@ function updateHighlightColor(highlightElement, newColor) {
         applyStylesToHighlight(highlightElement);
         
     } catch (error) {
-        console.error('Error updating highlight color:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error updating highlight color:', error); }
     }
 }
 

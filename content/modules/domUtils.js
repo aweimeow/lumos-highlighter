@@ -206,7 +206,7 @@ function getCSSSelector(element) {
         
         return path.length > 0 ? path.join(' > ') : '';
     } catch (error) {
-        console.error('Error generating CSS selector:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error generating CSS selector:', error); }
         return '';
     }
 }
@@ -264,7 +264,7 @@ function getTextNodesInRange(range) {
                     textNodes.push(node);
                 }
             } catch (error) {
-                console.warn('Error checking node:', error);
+                if (window.LumosLogger) { window.LumosLogger.warn('Error checking node:', error); }
             }
         }
     }
@@ -384,7 +384,7 @@ function createHighlightElement(node, index, text, highlightData) {
             return true;
         }
     } catch (error) {
-        console.error('Error creating highlight element:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error creating highlight element:', error); }
         return false;
     }
 }

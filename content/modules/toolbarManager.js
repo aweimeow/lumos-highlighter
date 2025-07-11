@@ -56,7 +56,7 @@ function showHighlightToolbar(selection) {
         showingToolbar = true;
         
     } catch (error) {
-        console.error('Error showing highlight toolbar:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error showing highlight toolbar:', error); }
     }
 }
 
@@ -70,29 +70,40 @@ function hideHighlightToolbar() {
         showingToolbar = false;
         currentSelection = null;
     } catch (error) {
-        console.error('Error hiding highlight toolbar:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error hiding highlight toolbar:', error); }
     }
 }
 
 // Show remove highlight toolbar
 function showRemoveHighlightToolbar(highlightElement) {
     try {
+        if (window.LumosLogger) {
+            window.LumosLogger.debug('Showing remove highlight toolbar for element:', highlightElement);
+        }
+        
         hideHighlightToolbar();
         
-        if (!highlightElement) return;
+        if (!highlightElement) {
+            if (window.LumosLogger) {
+                window.LumosLogger.warn('No highlight element provided to showRemoveHighlightToolbar');
+            }
+            return;
+        }
         
         const toolbar = document.createElement('div');
         toolbar.className = 'lumos-highlight-toolbar lumos-remove-toolbar';
         toolbar.innerHTML = `
-            <div class="lumos-color-options">
-                <button class="lumos-color-btn" data-color="red" title="Red"></button>
-                <button class="lumos-color-btn" data-color="orange" title="Orange"></button>
-                <button class="lumos-color-btn" data-color="yellow" title="Yellow"></button>
-                <button class="lumos-color-btn" data-color="green" title="Green"></button>
-                <button class="lumos-color-btn" data-color="blue" title="Blue"></button>
+            <div class="lumos-toolbar-actions">
+                <div class="lumos-color-options">
+                    <button class="lumos-color-btn" data-color="red" title="Red"></button>
+                    <button class="lumos-color-btn" data-color="orange" title="Orange"></button>
+                    <button class="lumos-color-btn" data-color="yellow" title="Yellow"></button>
+                    <button class="lumos-color-btn" data-color="green" title="Green"></button>
+                    <button class="lumos-color-btn" data-color="blue" title="Blue"></button>
+                </div>
+                <div class="lumos-separator">|</div>
+                <button class="lumos-remove-btn" title="Remove highlight">Delete</button>
             </div>
-            <div class="lumos-separator">|</div>
-            <button class="lumos-remove-btn" title="Remove highlight">Delete</button>
         `;
         
         // Position toolbar
@@ -101,6 +112,7 @@ function showRemoveHighlightToolbar(highlightElement) {
         toolbar.style.top = (rect.top + window.scrollY - 50) + 'px';
         toolbar.style.left = (rect.left + window.scrollX) + 'px';
         toolbar.style.zIndex = '10000';
+        toolbar.style.display = 'block';
         
         // Add event listeners
         const colorButtons = toolbar.querySelectorAll('.lumos-color-btn');
@@ -129,7 +141,7 @@ function showRemoveHighlightToolbar(highlightElement) {
         showingToolbar = true;
         
     } catch (error) {
-        console.error('Error showing remove highlight toolbar:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error showing remove highlight toolbar:', error); }
     }
 }
 

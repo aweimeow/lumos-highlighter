@@ -8,9 +8,9 @@ let domObserver = null;
 function addToPendingHighlights(highlightData) {
     try {
         pendingHighlights.push(highlightData);
-        console.log('Added highlight to pending list:', highlightData.text.substring(0, 30) + '...');
+        if (window.LumosLogger) { window.LumosLogger.debug('Added highlight to pending list:', highlightData.text.substring(0, 30) + '...'); }
     } catch (error) {
-        console.error('Error adding to pending highlights:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error adding to pending highlights:', error); }
     }
 }
 
@@ -19,7 +19,7 @@ function processPendingHighlights() {
     if (pendingHighlights.length === 0) return;
     
     try {
-        console.log(`Processing ${pendingHighlights.length} pending highlights...`);
+        if (window.LumosLogger) { window.LumosLogger.debug(`Processing ${pendingHighlights.length} pending highlights...`); }
         
         const remaining = [];
         
@@ -37,10 +37,10 @@ function processPendingHighlights() {
         pendingHighlights = remaining;
         
         if (pendingHighlights.length > 0) {
-            console.log(`${pendingHighlights.length} highlights still pending`);
+            if (window.LumosLogger) { window.LumosLogger.debug(`${pendingHighlights.length} highlights still pending`); }
         }
     } catch (error) {
-        console.error('Error processing pending highlights:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error processing pending highlights:', error); }
     }
 }
 
@@ -68,7 +68,7 @@ function startDOMObserver() {
             }
             
             if (hasSignificantChanges) {
-                console.log('Significant DOM changes detected, processing pending highlights...');
+                if (window.LumosLogger) { window.LumosLogger.debug('Significant DOM changes detected, processing pending highlights...'); }
                 setTimeout(processPendingHighlights, 1000);
             }
         });
@@ -78,9 +78,9 @@ function startDOMObserver() {
             subtree: true
         });
         
-        console.log('DOM observer started');
+        if (window.LumosLogger) { window.LumosLogger.debug('DOM observer started'); }
     } catch (error) {
-        console.error('Error starting DOM observer:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error starting DOM observer:', error); }
     }
 }
 
@@ -89,7 +89,7 @@ function stopDOMObserver() {
     if (domObserver) {
         domObserver.disconnect();
         domObserver = null;
-        console.log('DOM observer stopped');
+        if (window.LumosLogger) { window.LumosLogger.debug('DOM observer stopped'); }
     }
 }
 
@@ -104,7 +104,7 @@ function handleContentChanges() {
         // Simple approach - just process pending highlights
         processPendingHighlights();
     } catch (error) {
-        console.error('Error handling content changes:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error handling content changes:', error); }
     }
 }
 
@@ -116,9 +116,9 @@ function initializeDynamicContent() {
         // Process pending highlights periodically
         setInterval(processPendingHighlights, 5000);
         
-        console.log('Dynamic content handler initialized');
+        if (window.LumosLogger) { window.LumosLogger.debug('Dynamic content handler initialized'); }
     } catch (error) {
-        console.error('Error initializing dynamic content handler:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error initializing dynamic content handler:', error); }
     }
 }
 
@@ -130,7 +130,7 @@ function retryHighlightRestoration(highlightData, maxRetries = 3) {
         if (window.LumosHighlightManager) {
             const success = window.LumosHighlightManager.restoreHighlight(highlightData, false);
             if (success) {
-                console.log('Highlight restored after retry:', highlightData.text.substring(0, 30) + '...');
+                if (window.LumosLogger) { window.LumosLogger.debug('Highlight restored after retry:', highlightData.text.substring(0, 30) + '...'); }
                 return;
             }
         }
@@ -139,7 +139,7 @@ function retryHighlightRestoration(highlightData, maxRetries = 3) {
         if (retries < maxRetries) {
             setTimeout(tryRestore, 1000 * retries);
         } else {
-            console.log('Failed to restore highlight after retries:', highlightData.text.substring(0, 30) + '...');
+            if (window.LumosLogger) { window.LumosLogger.debug('Failed to restore highlight after retries:', highlightData.text.substring(0, 30) + '...'); }
             addToPendingHighlights(highlightData);
         }
     };

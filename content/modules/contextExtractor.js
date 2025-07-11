@@ -15,7 +15,7 @@ function getContextBefore(range) {
         
         return '';
     } catch (error) {
-        console.error('Error getting context before:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error getting context before:', error); }
         return '';
     }
 }
@@ -34,7 +34,7 @@ function getContextAfter(range) {
         
         return '';
     } catch (error) {
-        console.error('Error getting context after:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error getting context after:', error); }
         return '';
     }
 }
@@ -81,7 +81,7 @@ function getBackupContext(direction, range) {
             }
         }
     } catch (error) {
-        console.error('Error in backup context extraction:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error in backup context extraction:', error); }
     }
     
     return '';

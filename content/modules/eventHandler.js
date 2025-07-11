@@ -12,20 +12,20 @@ function init() {
         // Text selection event
         document.addEventListener('mouseup', handleTextSelection);
         
-        // Click events for highlight interaction
-        document.addEventListener('click', handleHighlightClick);
+        // Click events for highlight interaction - use capturing phase to ensure it runs first
+        document.addEventListener('click', handleHighlightClick, true);
         
-        // Hide toolbar on document click
-        document.addEventListener('click', handleDocumentClick);
+        // Hide toolbar on document click - use bubble phase
+        document.addEventListener('click', handleDocumentClick, false);
         
         // Initialize current styles
         currentStyles = window.LumosSharedConstants?.currentStyles || {};
         
         isInitialized = true;
-        console.log('Event handlers initialized');
+        if (window.LumosLogger) { window.LumosLogger.debug('Event handlers initialized'); }
         
     } catch (error) {
-        console.error('Error initializing event handlers:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error initializing event handlers:', error); }
     }
 }
 
@@ -47,7 +47,7 @@ function handleTextSelection(event) {
             }
         }, 10);
     } catch (error) {
-        console.error('Error handling text selection:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error handling text selection:', error); }
     }
 }
 
@@ -57,6 +57,11 @@ function handleHighlightClick(event) {
         const highlightElement = event.target.closest('.lumos-highlight');
         if (highlightElement) {
             event.stopPropagation();
+            event.preventDefault();
+            
+            if (window.LumosLogger) {
+                window.LumosLogger.debug('Highlight clicked, showing toolbar for element:', highlightElement);
+            }
             
             // Show remove/edit toolbar
             if (window.LumosToolbarManager) {
@@ -64,22 +69,25 @@ function handleHighlightClick(event) {
             }
         }
     } catch (error) {
-        console.error('Error handling highlight click:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error handling highlight click:', error); }
     }
 }
 
 // Handle document click
 function handleDocumentClick(event) {
     try {
-        // Hide toolbar if clicked outside
-        if (!event.target.closest('.lumos-highlight-toolbar') && 
-            !event.target.closest('.lumos-highlight')) {
-            if (window.LumosToolbarManager) {
-                window.LumosToolbarManager.hideHighlightToolbar();
+        // Add a small delay to ensure highlight click handler has time to execute
+        setTimeout(() => {
+            // Hide toolbar if clicked outside
+            if (!event.target.closest('.lumos-highlight-toolbar') && 
+                !event.target.closest('.lumos-highlight')) {
+                if (window.LumosToolbarManager) {
+                    window.LumosToolbarManager.hideHighlightToolbar();
+                }
             }
-        }
+        }, 10);
     } catch (error) {
-        console.error('Error handling document click:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error handling document click:', error); }
     }
 }
 
@@ -95,7 +103,7 @@ function handleDoubleClick(event) {
             }
         }
     } catch (error) {
-        console.error('Error handling double click:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error handling double click:', error); }
     }
 }
 
@@ -122,7 +130,7 @@ function setupSPANavigationDetection() {
         setInterval(checkUrlChange, 2000);
         
     } catch (error) {
-        console.error('Error setting up SPA navigation detection:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error setting up SPA navigation detection:', error); }
     }
 }
 

@@ -14,11 +14,11 @@ function saveHighlight(highlightData) {
                 domainData.title = document.title;
                 return window.LumosStorageInterface.StorageInterface.saveDomainHighlights(domain, domainData);
             }).catch(error => {
-                console.error('Error saving highlight:', error);
+                if (window.LumosLogger) { window.LumosLogger.error('Error saving highlight:', error); }
             });
         }
     } catch (error) {
-        console.error('Error in saveHighlight:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error in saveHighlight:', error); }
     }
 }
 
@@ -34,11 +34,11 @@ function deleteHighlight(highlightId) {
                     return window.LumosStorageInterface.StorageInterface.saveDomainHighlights(domain, domainData);
                 }
             }).catch(error => {
-                console.error('Error deleting highlight:', error);
+                if (window.LumosLogger) { window.LumosLogger.error('Error deleting highlight:', error); }
             });
         }
     } catch (error) {
-        console.error('Error in deleteHighlight:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error in deleteHighlight:', error); }
     }
 }
 
@@ -50,7 +50,7 @@ function restoreHighlights() {
         if (window.LumosStorageInterface) {
             window.LumosStorageInterface.StorageInterface.getDomainHighlights(domain).then(domainData => {
                 if (domainData.highlights && domainData.highlights.length > 0) {
-                    console.log(`Restoring ${domainData.highlights.length} highlights...`);
+                    if (window.LumosLogger) { window.LumosLogger.debug(`Restoring ${domainData.highlights.length} highlights...`); }
                     
                     // Simple restoration - just try to restore each highlight
                     domainData.highlights.forEach(highlightData => {
@@ -62,11 +62,11 @@ function restoreHighlights() {
                     });
                 }
             }).catch(error => {
-                console.error('Error restoring highlights:', error);
+                if (window.LumosLogger) { window.LumosLogger.error('Error restoring highlights:', error); }
             });
         }
     } catch (error) {
-        console.error('Error in restoreHighlights:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error in restoreHighlights:', error); }
     }
 }
 
@@ -95,7 +95,7 @@ function removeAllHighlightsFromCurrentPage(callback) {
             }
         });
     } catch (error) {
-        console.error('Error removing highlights:', error);
+        if (window.LumosLogger) { window.LumosLogger.error('Error removing highlights:', error); }
     }
 }
 
@@ -111,7 +111,7 @@ function getStorageStats() {
                         colorStats: metadata.color_stats || {}
                     });
                 }).catch(error => {
-                    console.error('Error getting storage stats:', error);
+                    if (window.LumosLogger) { window.LumosLogger.error('Error getting storage stats:', error); }
                     resolve({
                         totalHighlights: 0,
                         lastUpdated: null,
@@ -126,7 +126,7 @@ function getStorageStats() {
                 });
             }
         } catch (error) {
-            console.error('Error in getStorageStats:', error);
+            if (window.LumosLogger) { window.LumosLogger.error('Error in getStorageStats:', error); }
             resolve({
                 totalHighlights: 0,
                 lastUpdated: null,
