@@ -73,10 +73,11 @@ function startDOMObserver() {
             }
         });
         
-        domObserver.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
+        // Temporarily disable DOM observer to test toolbar issue
+        // domObserver.observe(document.body, {
+        //     childList: true,
+        //     subtree: true
+        // });
         
         if (window.LumosLogger) { window.LumosLogger.debug('DOM observer started'); }
     } catch (error) {

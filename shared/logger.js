@@ -40,7 +40,12 @@ class Logger {
                 await chrome.storage.local.set({ lumosDebugMode: enabled });
             }
         } catch (error) {
-            console.error('Failed to save debug mode setting:', error);
+            // Use console.info instead of console.error to avoid Chrome extension error indicators
+            console.info(
+                '%c[Lumos:ERROR] 🔴 Failed to save debug mode setting:',
+                'color: #ff4444; font-weight: bold; background-color: #ffebee; padding: 2px 4px; border-radius: 3px;',
+                error
+            );
         }
 
         this.info(`Debug mode ${enabled ? 'enabled' : 'disabled'}`);
@@ -53,22 +58,39 @@ class Logger {
     // Internal logging method
     _log(level, message, ...args) {
         if (level <= this.currentLevel) {
-            const timestamp = new Date().toISOString().substr(11, 12);
+            const timestamp = new Date().toISOString().substring(11, 23);
             const levelName = Object.keys(LOG_LEVELS)[level];
-            const prefix = `[${timestamp}] [Lumos:${levelName}]`;
             
             switch (level) {
                 case LOG_LEVELS.ERROR:
-                    console.error(prefix, message, ...args);
+                    // Use console.info with red styling to avoid Chrome extension error indicators
+                    console.info(
+                        `%c[${timestamp}] [Lumos:ERROR] 🔴 ${message}`,
+                        'color: #ff4444; font-weight: bold; background-color: #ffebee; padding: 2px 4px; border-radius: 3px;',
+                        ...args
+                    );
                     break;
                 case LOG_LEVELS.WARN:
-                    console.warn(prefix, message, ...args);
+                    // Use console.info with orange styling to avoid Chrome extension warning indicators
+                    console.info(
+                        `%c[${timestamp}] [Lumos:WARN] ⚠️ ${message}`,
+                        'color: #ff9800; font-weight: bold; background-color: #fff3e0; padding: 2px 4px; border-radius: 3px;',
+                        ...args
+                    );
                     break;
                 case LOG_LEVELS.INFO:
-                    console.info(prefix, message, ...args);
+                    console.info(
+                        `%c[${timestamp}] [Lumos:INFO] ℹ️ ${message}`,
+                        'color: #2196f3; font-weight: normal; background-color: #e3f2fd; padding: 2px 4px; border-radius: 3px;',
+                        ...args
+                    );
                     break;
                 case LOG_LEVELS.DEBUG:
-                    console.log(prefix, message, ...args);
+                    console.log(
+                        `%c[${timestamp}] [Lumos:DEBUG] 🔍 ${message}`,
+                        'color: #4caf50; font-weight: normal; background-color: #e8f5e8; padding: 2px 4px; border-radius: 3px;',
+                        ...args
+                    );
                     break;
             }
         }

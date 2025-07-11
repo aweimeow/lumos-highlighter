@@ -4,13 +4,25 @@
 let currentToolbar = null;
 let showingToolbar = false;
 let currentSelection = null;
+let toolbarProtectionTime = 0; // Timestamp to prevent immediate hiding
 
 // Show highlight toolbar
 function showHighlightToolbar(selection) {
     try {
+        if (window.LumosLogger) { 
+            window.LumosLogger.debug('🔧 showHighlightToolbar called with selection:', {
+                hasSelection: !!selection,
+                hasRange: selection ? !!selection.range : false,
+                text: selection ? selection.text.substring(0, 30) + '...' : 'none'
+            }); 
+        }
+        
         hideHighlightToolbar(); // Hide any existing toolbar
         
         if (!selection || !selection.range) {
+            if (window.LumosLogger) { 
+                window.LumosLogger.debug('❌ No selection or range, aborting toolbar creation'); 
+            }
             return;
         }
         
@@ -32,11 +44,25 @@ function showHighlightToolbar(selection) {
         // Position toolbar
         const range = selection.range;
         const rect = range.getBoundingClientRect();
+        const top = rect.top + window.scrollY - 50;
+        const left = rect.left + window.scrollX;
+        
         toolbar.style.position = 'absolute';
-        toolbar.style.top = (rect.top + window.scrollY - 50) + 'px';
-        toolbar.style.left = (rect.left + window.scrollX) + 'px';
+        toolbar.style.top = top + 'px';
+        toolbar.style.left = left + 'px';
         toolbar.style.zIndex = '10000';
         toolbar.style.display = 'block';
+        
+        if (window.LumosLogger) { 
+            window.LumosLogger.debug('📍 Positioning toolbar at:', {
+                top: top,
+                left: left,
+                rectTop: rect.top,
+                rectLeft: rect.left,
+                scrollY: window.scrollY,
+                scrollX: window.scrollX
+            }); 
+        }
         
         // Add event listeners
         const colorButtons = toolbar.querySelectorAll('.lumos-color-btn');
@@ -54,6 +80,32 @@ function showHighlightToolbar(selection) {
         document.body.appendChild(toolbar);
         currentToolbar = toolbar;
         showingToolbar = true;
+        toolbarProtectionTime = Date.now(); // Set protection timestamp
+        
+        if (window.LumosLogger) { 
+            window.LumosLogger.debug('✅ Toolbar created and added to DOM:', {
+                className: toolbar.className,
+                display: toolbar.style.display,
+                position: toolbar.style.position,
+                top: toolbar.style.top,
+                left: toolbar.style.left,
+                zIndex: toolbar.style.zIndex,
+                buttonCount: toolbar.querySelectorAll('.lumos-color-btn').length,
+                protectionTime: toolbarProtectionTime
+            }); 
+        }
+        
+        // Check if toolbar still exists after a short delay
+        setTimeout(() => {
+            const stillExists = document.querySelector('.lumos-highlight-toolbar');
+            if (window.LumosLogger) { 
+                window.LumosLogger.debug('🔍 Toolbar existence check after 100ms:', {
+                    stillExists: !!stillExists,
+                    currentToolbar: !!currentToolbar,
+                    showingToolbar: showingToolbar
+                }); 
+            }
+        }, 100);
         
     } catch (error) {
         if (window.LumosLogger) { window.LumosLogger.error('Error showing highlight toolbar:', error); }
@@ -64,6 +116,9 @@ function showHighlightToolbar(selection) {
 function hideHighlightToolbar() {
     try {
         if (currentToolbar) {
+            if (window.LumosLogger) { 
+                window.LumosLogger.debug('🗑️ Hiding toolbar - removing from DOM'); 
+            }
             currentToolbar.remove();
             currentToolbar = null;
         }
@@ -177,6 +232,19 @@ function getHighlightToolbar() {
     return currentToolbar;
 }
 
+// Check if toolbar is in protection period (just created)
+function isToolbarProtected() {
+    const now = Date.now();
+    const isProtected = (now - toolbarProtectionTime) < 200; // 200ms protection period
+    if (window.LumosLogger && isProtected) {
+        window.LumosLogger.debug('🛡️ Toolbar is in protection period:', {
+            timeSinceCreation: now - toolbarProtectionTime,
+            protectionRemaining: 200 - (now - toolbarProtectionTime)
+        });
+    }
+    return isProtected;
+}
+
 // Cleanup toolbar
 function cleanupToolbar() {
     hideHighlightToolbar();
@@ -191,5 +259,6 @@ window.LumosToolbarManager = {
     getShowingToolbar,
     setShowingToolbar,
     getHighlightToolbar,
+    isToolbarProtected,
     cleanupToolbar
 };

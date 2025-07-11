@@ -316,6 +316,10 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
+.lumos-highlight-toolbar[style*="display: block"] {
+    display: block !important;
+}
+
 .lumos-highlight-toolbar.lumos-remove-toolbar {
     display: flex;
     align-items: center;

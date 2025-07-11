@@ -282,7 +282,11 @@ class EventEmitter {
                 try {
                     callback(...args);
                 } catch (error) {
-                    console.error('Error in event callback:', error);
+                    if (window.LumosLogger) {
+                        window.LumosLogger.error('Error in event callback:', error);
+                    } else {
+                        console.info('Lumos Error in event callback:', error);
+                    }
                 }
             });
         }
