@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Lumos Highlighter",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Highlight text across web pages with five colors, store locally, and export as organized PDF notes",
   "author": "Wei-Yu Chen <me [at] weiyu [dot] dev>",
   "permissions": [
