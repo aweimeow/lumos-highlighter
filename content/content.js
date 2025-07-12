@@ -174,8 +174,38 @@ function handleRemoveAllHighlightsConfirmation() {
 // Handle complex ranges that span multiple elements
 function highlightComplexRange(range, highlightElement) {
     try {
+        // Debug: Check what's available in the global objects
+        if (window.LumosLogger) {
+            window.LumosLogger.info('Debug: Available LumosTextSelectionValidator functions:', 
+                window.LumosTextSelectionValidator ? Object.keys(window.LumosTextSelectionValidator) : 'undefined');
+            window.LumosLogger.info('Debug: Available LumosDomUtils functions:', 
+                window.LumosDomUtils ? Object.keys(window.LumosDomUtils) : 'undefined');
+        }
+        
         // Get all text nodes within the range
-        const textNodes = window.LumosTextSelectionValidator.getTextNodesInRange(range);
+        let textNodes;
+        try {
+            if (window.LumosTextSelectionValidator && window.LumosTextSelectionValidator.getTextNodesInRange) {
+                textNodes = window.LumosTextSelectionValidator.getTextNodesInRange(range);
+            } else if (window.LumosTextSelectionValidator && window.LumosTextSelectionValidator.getTextNodesInRangeForValidation) {
+                if (window.LumosLogger) {
+                    window.LumosLogger.warn('Debug: Using getTextNodesInRangeForValidation as fallback');
+                }
+                textNodes = window.LumosTextSelectionValidator.getTextNodesInRangeForValidation(range);
+            } else if (window.LumosDomUtils && window.LumosDomUtils.getTextNodesInRange) {
+                if (window.LumosLogger) {
+                    window.LumosLogger.warn('Debug: Using LumosDomUtils.getTextNodesInRange as fallback');
+                }
+                textNodes = window.LumosDomUtils.getTextNodesInRange(range);
+            } else {
+                throw new Error('No available getTextNodesInRange function found');
+            }
+        } catch (functionError) {
+            if (window.LumosLogger) {
+                window.LumosLogger.error('Debug: Error calling getTextNodesInRange function:', functionError);
+            }
+            throw functionError;
+        }
         
         if (textNodes.length === 0) {
             if (window.LumosLogger) {

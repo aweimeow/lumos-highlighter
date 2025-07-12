@@ -206,13 +206,25 @@ function getCurrentSelection() {
     if (selection.rangeCount === 0) return null;
     
     const range = selection.getRangeAt(0);
-    const text = range.toString().trim();
+    const originalText = range.toString();
     
-    if (text.length === 0) return null;
+    // Don't trim the text as it may truncate important characters
+    // Only check if the selection is effectively empty (all whitespace)
+    if (originalText.trim().length === 0) return null;
+    
+    // Debug potential truncation issues
+    if (window.LumosLogger && originalText !== originalText.trim()) {
+        window.LumosLogger.debug('Debug: Selection text has leading/trailing whitespace:', {
+            original: `"${originalText}"`,
+            trimmed: `"${originalText.trim()}"`,
+            startChar: originalText.charAt(0),
+            endChar: originalText.charAt(originalText.length - 1)
+        });
+    }
     
     return {
         range: range,
-        text: text,
+        text: originalText, // Use original text without trimming
         selection: selection
     };
 }
