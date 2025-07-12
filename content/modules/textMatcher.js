@@ -245,6 +245,26 @@ function calculateTextSimilarity(text1, text2) {
     const norm1 = normalize(text1);
     const norm2 = normalize(text2);
     
+    // Debug for the problematic case (only once per unique text pair)
+    if (window.LumosLogger && text1.includes('authorities in beijing') && !window._debuggedTextPairs) {
+        window._debuggedTextPairs = new Set();
+    }
+    if (window.LumosLogger && text1.includes('authorities in beijing')) {
+        const debugKey = text1.substring(0, 30) + '|' + text2.substring(0, 30);
+        if (!window._debuggedTextPairs.has(debugKey)) {
+            window._debuggedTextPairs.add(debugKey);
+            window.LumosLogger.debug('Debug: calculateTextSimilarity details:', {
+                text1: text1.substring(0, 50),
+                text2: text2.substring(0, 50),
+                norm1: norm1.substring(0, 50),
+                norm2: norm2.substring(0, 50),
+                areEqual: norm1 === norm2,
+                norm1Length: norm1.length,
+                norm2Length: norm2.length
+            });
+        }
+    }
+    
     if (norm1 === norm2) return 0.95;
     
     // Word-based similarity

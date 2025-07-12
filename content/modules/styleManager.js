@@ -71,27 +71,9 @@ function updateHighlightStyles(newStyles) {
     }
 }
 
-// Update highlight color
-function updateHighlightColor(highlightElement, newColor) {
-    try {
-        if (!highlightElement) return;
-        
-        // Update class
-        highlightElement.className = `lumos-highlight lumos-highlight-${newColor}`;
-        highlightElement.setAttribute('data-highlight-color', newColor);
-        
-        // Apply new styles
-        applyStylesToHighlight(highlightElement);
-        
-    } catch (error) {
-        if (window.LumosLogger) { window.LumosLogger.error('Error updating highlight color:', error); }
-    }
-}
-
 // Assign to global window object
 window.LumosStyleManager = {
     applyStylesToHighlight,
     getColorWithOpacity,
-    updateHighlightStyles,
-    updateHighlightColor
+    updateHighlightStyles
 };
