@@ -150,24 +150,32 @@ function setupMessageListener() {
 }
 
 // Handle confirmation dialog for removing all highlights
-function handleRemoveAllHighlightsConfirmation() {
-    const highlightElements = document.querySelectorAll('.lumos-highlight');
-    const count = highlightElements.length;
-    
-    if (count === 0) {
-        alert('No highlights found on this page.');
-        return;
-    }
-    
-    const confirmMessage = `Are you sure you want to remove all ${count} highlight${count > 1 ? 's' : ''} from this page?\n\nThis action cannot be undone.`;
-    
-    if (confirm(confirmMessage)) {
-        window.LumosStorageManager.removeAllHighlightsFromCurrentPage((highlightId) => {
-            window.LumosStorageManager.deleteHighlight(highlightId);
-        });
+async function handleRemoveAllHighlightsConfirmation() {
+    try {
+        const domain = window.LumosUtils.extractDomain(window.location.href);
+        const domainData = await window.LumosStorageInterface.StorageInterface.getDomainHighlights(domain);
+        const count = domainData.highlights ? domainData.highlights.length : 0;
         
-        // Hide any open toolbar
-        window.LumosToolbarManager.hideHighlightToolbar();
+        if (count === 0) {
+            alert('No highlights found on this page.');
+            return;
+        }
+        
+        const confirmMessage = `Are you sure you want to remove all ${count} highlight${count > 1 ? 's' : ''} from this page?\n\nThis action cannot be undone.`;
+        
+        if (confirm(confirmMessage)) {
+            window.LumosStorageManager.removeAllHighlightsFromCurrentPage((highlightId) => {
+                window.LumosStorageManager.deleteHighlight(highlightId);
+            });
+            
+            // Hide any open toolbar
+            window.LumosToolbarManager.hideHighlightToolbar();
+        }
+    } catch (error) {
+        if (window.LumosLogger) { 
+            window.LumosLogger.error('Error getting highlight count from storage:', error); 
+        }
+        alert('Error retrieving highlight information.');
     }
 }
 
